@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 121
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/uotghs
+END
+uotghs_host.c
+K 25
+svn:wc:ra_dav:version-url
+V 135
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/uotghs/uotghs_host.c
+END
+uotghs_otg.h
+K 25
+svn:wc:ra_dav:version-url
+V 134
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/uotghs/uotghs_otg.h
+END
+uotghs_host.h
+K 25
+svn:wc:ra_dav:version-url
+V 135
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/uotghs/uotghs_host.h
+END

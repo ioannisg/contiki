@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 120
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/usart
+END
+usart.h
+K 25
+svn:wc:ra_dav:version-url
+V 128
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/usart/usart.h
+END
+usart.c
+K 25
+svn:wc:ra_dav:version-url
+V 128
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/usart/usart.c
+END

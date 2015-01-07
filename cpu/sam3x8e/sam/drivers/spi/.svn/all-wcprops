@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 118
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/spi
+END
+spi.c
+K 25
+svn:wc:ra_dav:version-url
+V 124
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/spi/spi.c
+END
+spi.h
+K 25
+svn:wc:ra_dav:version-url
+V 124
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/drivers/spi/spi.h
+END
