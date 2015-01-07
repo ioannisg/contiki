@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 138
+/svn/Disney/!svn/ver/290/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/components/ethernet_phy/dm9161a
+END
+ethernet_phy.c
+K 25
+svn:wc:ra_dav:version-url
+V 153
+/svn/Disney/!svn/ver/290/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/components/ethernet_phy/dm9161a/ethernet_phy.c
+END
+ethernet_phy.h
+K 25
+svn:wc:ra_dav:version-url
+V 153
+/svn/Disney/!svn/ver/290/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/components/ethernet_phy/dm9161a/ethernet_phy.h
+END
+mii.h
+K 25
+svn:wc:ra_dav:version-url
+V 144
+/svn/Disney/!svn/ver/290/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/components/ethernet_phy/dm9161a/mii.h
+END

@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 141
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/components/resistive_touch/ads7843
+END
+ads7843.c
+K 25
+svn:wc:ra_dav:version-url
+V 151
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/components/resistive_touch/ads7843/ads7843.c
+END
+ads7843.h
+K 25
+svn:wc:ra_dav:version-url
+V 151
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/sam/components/resistive_touch/ads7843/ads7843.h
+END
