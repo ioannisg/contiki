@@ -1,1 +1,18 @@
 # Makefile for ATSAM3X8E
+
+# Cross-Compiler Executables
+CC      = arm-none-eabi-gcc
+CPP     = arm-none-eabi-cpp
+LD      = arm-none-eabi-gcc
+AR      = arm-none-eabi-ar
+OBJCOPY = arm-none-eabi-objcopy
+OBJDUMP = arm-none-eabi-objdump
+NM      = arm-none-eabi-nm
+
+# Source linker script
+# Use option to overwrite the default one.
+ifndef SOURCE_LDSCRIPT
+SOURCE_LDSCRIPT = $(CONTIKI_CPU)/sam3x8e.lds
+endif
+# Linker script (output)
+LDSCRIPT = $(OBJECTDIR)/sam3x8e.ld
