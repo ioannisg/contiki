@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 127
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/thirdparty/CMSIS/Include
+END
+core_cm3.h
+K 25
+svn:wc:ra_dav:version-url
+V 138
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/thirdparty/CMSIS/Include/core_cm3.h
+END
+core_cmFunc.h
+K 25
+svn:wc:ra_dav:version-url
+V 141
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/thirdparty/CMSIS/Include/core_cmFunc.h
+END
+core_cmInstr.h
+K 25
+svn:wc:ra_dav:version-url
+V 142
+/svn/Disney/!svn/ver/134/Contiki/Contiki_Port_Arduino_Due_2014/Contiki_Port_Arduino_Due_14/contiki/cpu/thirdparty/CMSIS/Include/core_cmInstr.h
+END

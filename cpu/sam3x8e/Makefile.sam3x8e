@@ -1,5 +1,5 @@
 # Makefile for ATSAM3X8E
-
+${info Including Makefile.sam3x8e}
 # Cross-Compiler Executables
 CC      = arm-none-eabi-gcc
 CPP     = arm-none-eabi-cpp
@@ -9,10 +9,157 @@ OBJCOPY = arm-none-eabi-objcopy
 OBJDUMP = arm-none-eabi-objdump
 NM      = arm-none-eabi-nm
 
-# Source linker script
-# Use option to overwrite the default one.
+##########  Source linker script
+# Use option to overwrite the default one if desired
 ifndef SOURCE_LDSCRIPT
-SOURCE_LDSCRIPT = $(CONTIKI_CPU)/sam3x8e.lds
+SOURCE_LDSCRIPT = $(CONTIKI_CPU)/sam/utils/linker_scripts/sam3x/sam3x8/gcc/flash1.ld
 endif
 # Linker script (output)
 LDSCRIPT = $(OBJECTDIR)/sam3x8e.ld
+
+# Check if we need to optimize for size
+ifeq ($(SMALL),1)
+ CFLAGS += -Os
+else
+ CFLAGS += -O2
+endif
+
+########## Standard compilation flags for SAM3X8E
+CFLAGS += -D__SAM3X8E__
+CFLAGS += -mcpu=cortex-m3 -mthumb
+# Prepare functions and data for garbage collection
+CFLAGS += -ffunction-sections -fdata-sections
+CFLAGS += -fno-strict-aliasing
+
+#########  Compilation flags taken from ASF
+CFLAGS += -x c -c # TODO check this 
+# Generate position-independent code
+CFLAGS += -fpic
+# Allow called functions be located anyware in the 32-bit address space
+CFLAGS += -mlong-calls
+# Extra warnings activated
+CFLAGS += -Wextra
+# Debug level
+CFLAGS += -g1
+# Other flags (Warnings)
+CFLAGS += -pipe -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration 
+CFLAGS += -Wpointer-arith -std=gnu99 -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain
+CFLAGS += -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas 
+CFLAGS += -Wfloat-equal -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return
+CFLAGS += -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls
+CFLAGS += -Wnested-externs -Wlong-long -Wunreachable-code --param max-inline-insns-single=500 
+#CFLAGS += -Wundef -Wcast-align
+
+######### Compilation flags in Contiki, not in ASF
+CFLAGS += -mlittle-endian
+CFLAGS += -fshort-enums -fomit-frame-pointer
+#CFLAGS += -Wall
+
+##########  Linker flags
+LDFLAGS += -mcpu=cortex-m3 -mthumb -nostartfiles
+#Include source linker script
+LDFLAGS += -T $(LDSCRIPT)
+LDFLAGS += -Wl,--gc-sections
+#LDFLAGS += -Wl, --sort-section-alignment
+LDFLAGS += -Wl,-Map=$(@:.elf=-$(TARGET).map),--cref,--no-warn-mismatch
+LDFLAGS += -Wl,--entry=Reset_Handler
+
+# Flags defined in ASF
+LDFLAGS += -lm -larm_cortexM3l_math -fpic
+#LDFLAGS += -Wl,--start-group -lm -larm_cortexM3I_math -fpic -Wl,--end-group
+OBJCOPY_FLAGS += -O binary --gap-fill 0xff
+OBJDUMP_FLAGS += --disassemble --source --disassembler-options=force-thumb
+
+# Include search folders for linker
+LDFLAGS += -L"/home/ioannisg/Work/Projects/Contiki/Contiki-dev/contiki/cpu/sam3x8e/sam/utils/linkerScripts"
+LDFLAGS += -L"/home/ioannisg/Work/Projects/Contiki/Contiki-dev/contiki/cpu/sam3x8e/thirdparty/CMSIS/Lib/GCC"
+
+# CPU-dependent cleanup files
+CLEAN += symbols.c symbol.h *.d *.elf *.hex
+
+#CPU-dependent directories
+CONTIKI_CPU_DIRS += . dev
+CONTIKI_CPU_DIRS += ./common/utils ./common/utils/interrupt ./common/utils/stdio ./common/utils/stdio/stdio_serial
+
+CONTIKI_CPU_DIRS += ./common/boards
+CONTIKI_CPU_DIRS += ./common/services/delay ./common/services/clock ./common/services/gpio \
+                    ./common/services/ioport ./common/services/spi ./common/services/twi \
+                    ./common/services/serial ./common/services/sleepmgr ./common/services/usb \
+                    ./common/services/usb/class/vendor ./common/services/usb/class/vendor/host \
+                    ./common/services/usb/uhc
+CONTIKI_CPU_DIRS += ./common/components/memory/sd_mmc
+
+CONTIKI_CPU_DIRS += ./sam/utils
+CONTIKI_CPU_DIRS += ./sam/utils/cmsis/sam3x/include ./sam/utils/cmsis/sam3x/include/component
+CONTIKI_CPU_DIRS += ./sam/utils/cmsis/sam3x/include/instance ./sam/utils/cmsis/sam3x/include/pio
+CONTIKI_CPU_DIRS += ./sam/utils/cmsis/sam3x/source/templates ./sam/utils/cmsis/sam3x/source/templates/gcc
+CONTIKI_CPU_DIRS += ./sam/utils/preprocessor
+CONTIKI_CPU_DIRS += ./sam/utils/header_files
+CONTIKI_CPU_DIRS += ./sam/boards
+CONTIKI_CPU_DIRS += ./sam/drivers/efc ./sam/drivers/emac ./sam/drivers/pio ./sam/drivers/pmc ./sam/drivers/rstc \
+		    ./sam/drivers/spi ./sam/drivers/twi ./sam/drivers/tc ./sam/drivers/trng ./sam/drivers/uart \
+                    ./sam/drivers/uotghs ./sam/drivers/usart ./sam/drivers/wdt
+
+CONTIKI_CPU_DIRS += ./sam/components/resistive_touch/ads7843 ./sam/components/ethernet_phy/dm9161a ./sam/services/flash_efc
+
+CONTIKI_CPU_DIRS += ./thirdparty/CMSIS/Include
+
+# Use the existing debug I/O in cpu/arm/common
+CONTIKI_CPU_DIRS += ../arm/common/dbg-io
+
+###############################################################################
+# CPU Source Files for SAM3X8E
+CONTIKI_CPU_SOURCEFILES += startup_sam3x.c exceptions.c system_sam3x.c syscalls.c
+
+CONTIKI_CPU_SOURCEFILES += sd_mmc.c sd_mmc_spi.c sysclk.c cycle_counter.c sleepmgr.c spi_master.c uhi_vendor.c \
+                           uhc.c interrupt_sam_nvic.c read.c write.c
+CONTIKI_CPU_SOURCEFILES += init.c ethernet_phy.c ads7843.c flash_efc.c
+CONTIKI_CPU_SOURCEFILES += efc.c emac.c pio.c pio_handler.c pmc.c sleep.c rstc.c spi.c tc.c trng.c twi.c \
+                           uart.c uotghs_host.c usart.c wdt.c
+CONTIKI_CPU_SOURCEFILES += cfs-coffe-arch.c clock.c ota_flash_utils.c rand.c rtimer-arch.c slip-uart1.c \
+                           spi-arch.c uip-arch.c usb-drv.c watchdog.c
+CONTIKI_CPU_SOURCEFILES += pend-SV.c uart1.c usart1.c usb.c
+
+CONTIKI_SOURCEFILES += $(CONTIKI_CPU_SOURCEFILES)
+
+## Don't treat the .elf as intermediate
+.PRECIOUS: %.elf %.hex %.bin
+
+### Always re-build ieee-addr.o in case the command line passes a new NODEID
+FORCE:
+
+$(OBJECTDIR)/ieee-addr.o: ieee-addr.c FORCE | $(OBJECTDIR)
+	$(TRACE_CC)
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
+### Compilation rules
+CUSTOM_RULE_LINK=1
+
+%.elf: $(TARGET_STARTFILES) %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a $(LDSCRIPT)
+	$(TRACE_LD)
+	$(Q)$(LD) $(LDFLAGS) ${filter-out $(LDSCRIPT) %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) -o $@
+
+%.hex: %.elf
+	$(OBJCOPY) -O ihex $< $@
+
+%.bin: %.elf
+	$(OBJCOPY) $(OBJCOPY_FLAGS) $< $@
+
+%.lst: %.elf
+	$(OBJDUMP) $(OBJDUMP_FLAGS) $< > $@
+
+### We don't really need the .hex and .bin for the .$(TARGET) but let's make
+### sure they get built
+%.$(TARGET): %.elf %.hex %.bin
+	cp $< $@
+
+### This rule is used to generate the correct linker script
+LDGENFLAGS += $(addprefix -D,$(subst $(COMMA), ,$(DEFINES)))
+LDGENFLAGS += $(addprefix -I,$(SOURCEDIRS))
+LDGENFLAGS += -imacros "contiki-conf.h"
+LDGENFLAGS += -x c -P -E -D__SAM3X8E__
+
+# NB: Assumes LDSCRIPT was not overridden and is in $(OBJECTDIR)
+$(LDSCRIPT): $(SOURCE_LDSCRIPT) FORCE | $(OBJECTDIR)
+	$(TRACE_CC)
+	$(Q)$(CC) $(LDGENFLAGS) $< -o $@

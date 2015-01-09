@@ -1,0 +1,85 @@
+#Makefile for the Arduino Due X platform
+${info Including Arduino Makefile}
+ifndef CONTIKI
+  $(error CONTIKI not defined! You must specify where Contiki resides!)
+endif
+
+# Add link support
+CONTIKI_WITH_XBEE=1
+CONTIKI_WITH_ETHERNET=0
+CONTIKI_WITH_WIFI=0
+
+# Define target-specific compilation directives
+CFLAGS += -DBOARD=ARDUINO_DUE_X -DNDEBUG -DARM_MATH_CM3=true -Dprintf=iprintf
+
+CFLAGS += -DAUTOSTART_ENABLE # TODO check where to move this one
+
+CONTIKI_TARGET_DIRS += . arduino config sensors
+CONTIKI_TARGET_SOURCEFILES += arduino_due.c wire_digital.c contiki-main.c tilt-sensor.c
+
+# Include source folders for network drivers based on the network setup, add relative
+# files in the build tree and define MACROS for Contiki
+ifeq ($(CONTIKI_WITH_ETHERNET),1)
+WITH_ETHERNET_SUPPORT=1
+CONTIKI_TARGET_DIRS += ethernet
+CONTIKI_TARGET_SOURCEFILES += enc424j600-drv.c enc424j600.c enc424j600-spi.c
+else
+WITH_ETHERNET_SUPPORT=0
+endif
+
+ifeq ($(CONTIKI_WITH_XBEE),1)
+WITH_ZIGBEE_SUPPORT=1
+CONTIKI_TARGET_DIRS += xbee
+CONTIKI_TARGET_SOURCEFILES += xbee-drv.c xbee.c
+else
+WITH_ZIGBEE_SUPPORT=0
+endif
+
+ifeq ($(CONTIKI_WITH_WIFI),1)
+WITH_WIFI_SUPPORT=1
+WITH_USB_HOST_SUPPORT=1
+CONTIKI_TARGET_DIRS += wifi wifi/ar9170_include wifi/ar9170_fw
+CONTIKI_TARGET_SOURCEFILES += ar9170-drv.c ar9170_rx.c ar9170_tx.c ar9170_usb.c ar9170_cmd.c ar9170_mac.c
+CONTIKI_TARGET_SOURCEFILES += ar9170_psm.c ar9170_phy.c ar9170_main.c ar9170_fw.c ar9170_led.c
+else
+WITH_WIFI_SUPPORT=0
+WITH_USB_HOST_SUPPORT=0
+endif
+
+ifeq ($(WITH_USB_HOST_SUPPORT), 1)
+  CFLAGS += -DUHD_ENABLE
+endif
+
+
+CFLAGS += -DWITH_ETHERNET_SUPPORT=$(WITH_ETHERNET_SUPPORT) \
+          -DWITH_WIFI_SUPPORT=$(WITH_WIFI_SUPPORT) \
+          -DWITH_ZIGBEE_SUPPORT=$(WITH_ZIGBEE_SUPPORT) \
+          -DWITH_USB_HOST_SUPPORT=$(WITH_USB_HOST_SUPPORT)
+
+CONTIKI_SOURCEFILES += $(CONTIKI_TARGET_SOURCEFILES)
+
+CLEAN += *.arduino_due_x
+
+### Unless the example dictates otherwise, build with code size optimization
+ifndef SMALL
+  SMALL = 1
+endif
+
+### Define the CPU directory and include the CPU Makefile
+CONTIKI_CPU = $(CONTIKI)/cpu/sam3x8e
+include $(CONTIKI_CPU)/Makefile.sam3x8e
+
+MODULES += core/net core/net/mac core/net/llsec
+
+# Depending on the network drivers we include the corresponding network modules
+ifeq ($(WITH_ETHERNET_SUPPORT), 1)
+MODULES += core/net/mac/ieee8023
+endif
+
+ifeq ($(WITH_WIFI_SUPPORT), 1)
+MODULES += core/net/mac/ieee80211
+endif
+
+ifeq ($(WITH_ZIGBEE_SUPPORT), 1)
+MODULES += core/net/mac/xbee
+endif
