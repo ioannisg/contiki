@@ -1997,7 +1997,8 @@ sicslowpan_connect(uint8_t up)
 const struct network_driver sicslowpan_driver = {
   "sicslowpan",
   sicslowpan_init,
-  input
+  input,
+  sicslowpan_connect,
 };
 /*--------------------------------------------------------------------*/
 /** @} */
