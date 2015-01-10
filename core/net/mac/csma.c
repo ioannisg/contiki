@@ -47,6 +47,7 @@
 #include "lib/random.h"
 
 #include "net/netstack.h"
+#include "net/netstack_x.h"
 
 #include "lib/list.h"
 #include "lib/memb.h"
@@ -413,7 +414,9 @@ send_packet(mac_callback_t sent, void *ptr)
 static void
 input_packet(void)
 {
+  link_if_in(NETSTACK_802154);
   NETSTACK_LLSEC.input();
+  link_if_in(NETSTACK_NULL);
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -438,6 +441,12 @@ channel_check_interval(void)
 }
 /*---------------------------------------------------------------------------*/
 static void
+connect_event(uint8_t up)
+{
+  NETSTACK_NETWORK.connect_event(up);
+}
+/*---------------------------------------------------------------------------*/
+static void
 init(void)
 {
   memb_init(&packet_memb);
@@ -453,5 +462,6 @@ const struct mac_driver csma_driver = {
   on,
   off,
   channel_check_interval,
+  connect_event,
 };
 /*---------------------------------------------------------------------------*/
