@@ -68,6 +68,11 @@
 #include "net/rime/rime.h"
 #include "net/ipv6/sicslowpan.h"
 #include "net/netstack.h"
+#include "net/netstack_x.h"
+
+#if UIP_CONF_MULTI_IFACES
+#include "assert.h
+#endif
 
 #include <stdio.h>
 
@@ -261,6 +266,14 @@ static struct timer reass_timer;
 
 static int last_rssi;
 
+#if (defined UIP_CONF_MULTI_IFACES) && (UIP_CONF_MULTI_IFACES != 0)
+/** \brief a pointer to the corresponding UIP_DS6 interface structure */
+static uip_ds6_iface_t *uip_iface = NULL;
+#else
+/** \brief a link type variable */
+netstack_link_type_t link_if;
+#endif /* UIP_MULTI_IFACES */
+
 /*-------------------------------------------------------------------------*/
 /* Rime Sniffer support for one single listener to enable powertrace of IP */
 /*-------------------------------------------------------------------------*/
@@ -447,7 +460,12 @@ uncompress_addr(uip_ipaddr_t *ipaddr, uint8_t const prefix[],
     hc06_ptr += postcount;
   } else if (prefcount > 0) {
     /* no IID based configuration if no prefix and no data => unspec */
+#if ! UIP_CONF_MULTI_IFACES
     uip_ds6_set_addr_iid(ipaddr, lladdr);
+#else
+    uip_ds6_set_addr_iid(ipaddr, lladdr, NETSTACK_802154);
+#endif
+
   }
 
   PRINT6ADDR(ipaddr);
@@ -1309,8 +1327,15 @@ compress_hdr_ipv6(linkaddr_t *link_destaddr)
 static void
 packet_sent(void *ptr, int status, int transmissions)
 {
+#if ! UIP_CONF_MULTI_IFACES
   uip_ds6_link_neighbor_callback(status, transmissions);
-
+#else
+  if (status != 0) {
+    PRINTF("sicslowpan: tx-status:%u\n", status);
+  }
+  uip_ds6_link_neighbor_callback(uip_iface, status, transmissions);
+#endif
+  
   if(callback != NULL) {
     callback->output_callback(status);
   }
@@ -1333,7 +1358,11 @@ send_packet(linkaddr_t *dest)
 
 #if NETSTACK_CONF_BRIDGE_MODE
   /* This needs to be explicitly set here for bridge mode to work */
+#if ! UIP_CONF_MULTI_IFACES
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER,(void*)&uip_lladdr);
+#else
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER,(void*)&uip_iface->lladdr);
+#endif /* UIP_CONF_MULTI_IFACES */
 #endif
 
   /* Force acknowledge from sender (test hardware autoacks) */
@@ -1592,6 +1621,20 @@ output(const uip_lladdr_t *localdest)
 static void
 input(void)
 {
+#if UIP_MULTI_IFACES
+  if (unlikely(uip_len != 0 || uip_in_if != NULL || uip_out_if != NULL)) {
+    PRINTF("sicslowpan: non-empty-uip; drop. %u %u %u\n",
+    uip_len != 0,
+    uip_in_if != NULL,
+    uip_out_if != NULL);
+    return;
+  }
+#else /* UIP_MULTI_IFACES */
+  if (uip_len != 0) {
+    PRINTF("sicslowpan: non-empty-uip; drop.\n");
+    return;
+  }
+#endif /* UIP_MULTI_IFACES */
   /* size of the IP packet (read from fragment) */
   uint16_t frag_size = 0;
   /* offset of the fragment in the IP packet */
@@ -1848,6 +1891,10 @@ input(void)
       set_packet_attrs();
       callback->input_callback();
     }
+#if UIP_MULTI_IFACES
+    /* Set the interface pointer before calling the UIP input method */
+    uip_in_if = uip_iface;
+#endif /* UIP_MULTI_IFACES */
 
     tcpip_input();
 #if SICSLOWPAN_CONF_FRAG
@@ -1862,12 +1909,6 @@ input(void)
 void
 sicslowpan_init(void)
 {
-  /*
-   * Set out output function as the function to be called from uIP to
-   * send a packet.
-   */
-  tcpip_set_outputfunc(output);
-
 #if SICSLOWPAN_COMPRESSION == SICSLOWPAN_COMPRESSION_HC06
 /* Preinitialize any address contexts for better header compression
  * (Saves up to 13 bytes per 6lowpan packet)
@@ -1918,6 +1959,39 @@ int
 sicslowpan_get_last_rssi(void)
 {
   return last_rssi;
+}
+/*--------------------------------------------------------------------*/
+static void
+sicslowpan_connect(uint8_t up)
+{
+#if ! UIP_CONF_MULTI_IFACES
+  /* This is the only interface so we must set up the
+   * link address for UIP4, particularly, for the ARP.
+   */
+#pragma message("LINK address set by XBEE")
+  memcpy(uip_lladdr.addr, &linkaddr_node_addr, UIP_LLADDR_LEN);  
+#endif /* ! UIP_MULTI_IFACES */
+  /* Interface is up. Start UIP6 if not running yet. */
+  if (!process_is_running(&tcpip_process)) {
+    PRINTF("sicslowpan: starting-uip-stack\n");
+    process_start(&tcpip_process, NULL);
+  }
+#if ! UIP_MULTI_IFACES
+  /*
+   * Set out output function as the function to be called from uIP to
+   * send a packet.
+   */
+  tcpip_set_outputfunc(output);
+#else /* UIP_MULTI_IFACES */
+  /* Register the interface with UIP-DS6 */
+  if ((uip_iface = uip_ds6_register_net_iface(NETSTACK_802154, 
+    &linkaddr_node_addr, output)) == NULL) {
+    PRINTF("sicslowpan: interface registration failed\n");
+    return;
+  }
+  /* Inform TCP/IP stack so it can start the interface */
+  process_post(&tcpip_process, uip_ds6_iface_event, uip_iface);
+#endif /* UIP_MULTI_IFACES */
 }
 /*--------------------------------------------------------------------*/
 const struct network_driver sicslowpan_driver = {
