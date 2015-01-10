@@ -7,6 +7,9 @@
  */ 
 #include "contiki.h"
 #include "contiki-net.h"
+
+#if WITH_USB_HOST_SUPPORT
+
 #include "usb-drv.h"
 #include "usb_dev.h"
 #include "usb.h"
@@ -21,7 +24,6 @@
 #define PRINTF(...)
 #endif
 
-#if WITH_USB_HOST_SUPPORT
 
 #ifdef USB_BULK_EP_MAX_WORD_SIZE
 #define USB_DRV_BULK_EP_MAX_WORD_SIZE	USB_BULK_EP_MAX_WORD_SIZE

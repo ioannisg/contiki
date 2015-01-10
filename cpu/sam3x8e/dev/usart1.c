@@ -10,7 +10,7 @@
 #include "usart.h"
 
 #include "platform-conf.h"
-#include "sam3x\sysclk.h"
+#include "sysclk.h"
 #include "watchdog.h"
 #include "energest.h"
 #include "status_codes.h"

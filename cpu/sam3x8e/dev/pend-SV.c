@@ -9,7 +9,7 @@
 #include "sam3x8e.h"
 #include "core_cm3.h"
 #include "pend-SV.h"
-#include "interrupt\interrupt_sam_nvic.h"
+#include "interrupt_sam_nvic.h"
 #include "pmc.h"
 
 

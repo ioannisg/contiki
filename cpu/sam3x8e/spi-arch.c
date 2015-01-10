@@ -8,7 +8,7 @@
  */ 
 #include "contiki-conf.h"
 #include "core/dev/spi.h"
-#include "cpu/common/services/spi/spi_master.h"
+#include "spi_master.h"
 
 
 /** Spi H/W ID */
