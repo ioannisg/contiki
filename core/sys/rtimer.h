@@ -1,3 +1,23 @@
+/** \addtogroup sys
+ * @{ */
+
+/**
+ * \defgroup rt Real-time task scheduling
+ *
+ * The real-time module handles the scheduling and execution of
+ * real-time tasks (with predictable execution times).
+ *
+ * @{
+ */
+
+/**
+ * \file
+ *         Header file for the real-time timer module.
+ * \author
+ *         Adam Dunkels <adam@sics.se>
+ *
+ */
+
 /*
  * Copyright (c) 2005, Swedish Institute of Computer Science
  * All rights reserved.
@@ -29,27 +49,6 @@
  * This file is part of the Contiki operating system.
  *
  */
-
-/**
- * \file
- *         Header file for the real-time timer module.
- * \author
- *         Adam Dunkels <adam@sics.se>
- *
- */
-
-/** \addtogroup sys
- * @{ */
-
-/**
- * \defgroup rt Real-time task scheduling
- *
- * The real-time module handles the scheduling and execution of
- * real-time tasks (with predictable execution times).
- *
- * @{
- */
-
 #ifndef RTIMER_H_
 #define RTIMER_H_
 
@@ -82,6 +81,9 @@ typedef void (* rtimer_callback_t)(struct rtimer *t, void *ptr);
  *             support module for the real-time module.
  */
 struct rtimer {
+#if WITH_MULTIPLE_RTIMERS
+  struct rtimer *next;
+#endif /* WITH_MULTIPLE_RTIMERS */	
   rtimer_clock_t time;
   rtimer_callback_t func;
   void *ptr;
@@ -146,11 +148,28 @@ void rtimer_run_next(void);
 #define RTIMER_TIME(task) ((task)->time)
 
 void rtimer_arch_init(void);
-void rtimer_arch_schedule(rtimer_clock_t t);
 /*rtimer_clock_t rtimer_arch_now(void);*/
+
+/**
+ * \brief       Stop a current rtimer
+ */
+void rtimer_stop(struct rtimer *_rtimer);
 
 #define RTIMER_SECOND RTIMER_ARCH_SECOND
 
+#if WITH_MULTIPLE_RTIMERS
+uint8_t rtimer_arch_schedule(rtimer_clock_t t, enum rtimer_channel tc_channel);
+/**
+ * \brief      Execute the alternative real-time task
+ *
+ *             This function is called by the architecture dependent
+ *             code to execute and schedule the next real-time task.
+ *
+ */
+void rtimer_run_alter(void);
+#else
+uint8_t rtimer_arch_schedule(rtimer_clock_t t);
+#endif /* WITH_MULTIPLE_RTIMERS */
 #endif /* RTIMER_H_ */
 
 /** @} */

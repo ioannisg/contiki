@@ -348,6 +348,12 @@ channel_check_interval(void)
 }
 /*---------------------------------------------------------------------------*/
 static void
+connect_event(uint8_t up)
+{
+  NETSTACK_MAC.connect_event(up);
+}
+/*---------------------------------------------------------------------------*/
+static void
 init(void)
 {
   on();
@@ -362,5 +368,6 @@ const struct rdc_driver nullrdc_driver = {
   on,
   off,
   channel_check_interval,
+  connect_event,
 };
 /*---------------------------------------------------------------------------*/

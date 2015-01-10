@@ -122,6 +122,9 @@ struct network_driver {
 
   /** Callback for getting notified of incoming packet. */
   void (* input)(void);
+
+  /** Callback for getting notified of link connection event */
+  void (*connect_event)(uint8_t up);
 };
 
 extern const struct network_driver NETSTACK_NETWORK;
