@@ -333,6 +333,11 @@ struct packetbuf_addr {
 #define PACKETBUF_ATTR_PACKET_TYPE_STREAM_END 3
 #define PACKETBUF_ATTR_PACKET_TYPE_TIMESTAMP 4
 
+#if WITH_WIFI_SUPPORT
+#define PACKETBUF_ATTR_PACKET_TYPE_ATIM      5
+#define PACKETBUF_ATTR_PACKET_TYPE_BCN       6
+#endif
+
 enum {
   PACKETBUF_ATTR_NONE,
 
@@ -372,6 +377,15 @@ enum {
 #endif /* LLSEC802154_USES_EXPLICIT_KEYS */
 #endif /* LLSEC802154_SECURITY_LEVEL */
   
+  /* Scope 1 attributes for 802.3/802.11 link-layers */
+#if WITH_WIFI_SUPPORT
+  PACKETBUF_ATTR_MAC_TX_RSP_SEQNO,
+  PACKETBUF_ATTR_STA_PSM,
+#endif
+#if WITH_ETHERNET_SUPPORT
+  PACKETBUF_ATTR_ETH_PROTO,
+#endif
+
   /* Scope 2 attributes: used between end-to-end nodes. */
 #if NETSTACK_CONF_WITH_RIME
   PACKETBUF_ATTR_HOPS,
