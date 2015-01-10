@@ -50,18 +50,12 @@
 #ifndef PLATFORM_CONF_H_
 #define PLATFORM_CONF_H_
 
-//#include PLATFORM_HEADER XXX
 #include <inttypes.h>
 #include <string.h>             // For memcpm().
 #include "sam3x8e.h"
 #include "compiler.h"
 #include "interrupt_sam_nvic.h"
 
-
-//#define COMPILER_ALIGNED(x)				COMPILER_ALIGNED(x)
-#ifndef __SAM3X8E__
-#define __SAM3X8E__
-#endif
 
 /* Platform-dependent definitions */
 #define CC_CONF_REGISTER_ARGS          			0
@@ -87,7 +81,7 @@ typedef unsigned short uip_stats_t;
 #if WITH_ETHERNET_SUPPORT == 1
 #define ETHERNET_DEV_DRIVER				enc424j600_driver
 #define ENC624J600_CONF_IRQ_PIN                         16
-#include "enc424j600-conf.h"
+#include "enc424J600-conf.h"
 #define ETHERNET_MAX_FRAME_LEN			        ENC424J600_MAX_RX_FRAME_LEN
 #endif
 
@@ -127,9 +121,9 @@ typedef unsigned short uip_stats_t;
  * firmware upgrade will be supported
  */
 #ifdef WITH_OTA_UPGRADE
-#define ENABLE_OTA_FW_UPGRADE					1
+#define ENABLE_OTA_FW_UPGRADE				1
 #else
-#define ENABLE_OTA_FW_UPGRADE					0
+#define ENABLE_OTA_FW_UPGRADE				0
 #endif
 
 /* 
@@ -137,7 +131,7 @@ typedef unsigned short uip_stats_t;
  * A tick is ~95nanoseconds 
  */
 #define RTIMER_ARCH_CONF_RESOLUTION			1
-#define WITH_MULTIPLE_RTIMERS					1
+#define WITH_MULTIPLE_RTIMERS				1
 #define RTIMER_PENDING_CONF_LEN				8
 #define RTIMER_ARCH_GUARD_TIME				65 // ~6 us
 /* A trick to resolve a compilation error with IAR. */
@@ -153,25 +147,25 @@ typedef uint64_t rtimer_clock_t;
 
 #define RTIMER_CLOCK_LT(a,b)    ((signed short)((a)-(b)) < 0)
 
-#define UIP_ARCH_ADD32							1
-#define UIP_ARCH_CHKSUM							0
+#define UIP_ARCH_ADD32					0//1
+#define UIP_ARCH_CHKSUM					0
 
-#define UIP_CONF_BYTE_ORDER					UIP_LITTLE_ENDIAN
-#define EEPROM_CONF_SIZE						0
+#define UIP_CONF_BYTE_ORDER				UIP_LITTLE_ENDIAN
+#define EEPROM_CONF_SIZE				0
 
 /* ---- Watchdog Settings. ---- */
 
 /** Watchdog period 5000ms */
-#define WDT_PERIOD								5000
+#define WDT_PERIOD					5000
 
 /* ----- Sensor Settings ------ */
 #define TILT_SENSOR_CONF_PIN_NUMBER			17
 
 /* ----- Macros for atomic operations -------*/
-#define INTERRUPTS_DISABLE()					cpu_irq_enter_critical()
-#define INTERRUPTS_ENABLE()					cpu_irq_leave_critical()
+#define INTERRUPTS_DISABLE()				cpu_irq_enter_critical()
+#define INTERRUPTS_ENABLE()				cpu_irq_leave_critical()
 #define INTERRUPT_DISABLE(irq_id)			NVIC_DisableIRQ(irq_id)
-#define INTERRUPT_ENABLE(irq_id)				NVIC_EnableIRQ(irq_id)
+#define INTERRUPT_ENABLE(irq_id)			NVIC_EnableIRQ(irq_id)
 
 /* ---- Flash/SD configuration for the COFFEE file system ---- */
 
@@ -182,22 +176,22 @@ typedef uint64_t rtimer_clock_t;
 #ifdef WITH_COFFEE_SUPPORT /* It is the COFFEE=1 flag in Instant Contiki */
 /* Default values for coffee section start unless otherwise stated */
 #ifndef WITH_SD_SUPPORT
-#define FLASH_BANK0_SIZE						IFLASH0_SIZE
-#define FLASH_BANK1_SIZE						IFLASH1_SIZE
-#define FLASH_BANK0_START						IFLASH0_ADDR
-#define FLASH_BANK1_START						IFLASH1_ADDR
-#define BANK1_PAGE_SIZE							IFLASH1_PAGE_SIZE
-#define BANK0_PAGE_SIZE							IFLASH0_PAGE_SIZE
+#define FLASH_BANK0_SIZE				IFLASH0_SIZE
+#define FLASH_BANK1_SIZE				IFLASH1_SIZE
+#define FLASH_BANK0_START				IFLASH0_ADDR
+#define FLASH_BANK1_START				IFLASH1_ADDR
+#define BANK1_PAGE_SIZE					IFLASH1_PAGE_SIZE
+#define BANK0_PAGE_SIZE					IFLASH0_PAGE_SIZE
 #ifndef COFFEE_ADDRESS
 /* Notice that this leaves 256KB of flash for the coffee file system
  * allowing only the first 256KB for program image. Be very careful!
  */
-#define COFFEE_ADDRESS							0
+#define COFFEE_ADDRESS					0
 #endif /* COFFEE_ADDRESS */
 #else /* WITH_SD_SUPPORT */
-#define WITH_SD_CARD_SUPPORT					1
+#define WITH_SD_CARD_SUPPORT				1
 #ifndef COFFEE_ADDRESS
-#define COFFEE_ADDRESS							0
+#define COFFEE_ADDRESS					0
 #else
 #error "COFFEE_ADDRESS should be 0 if SD is present!"
 #endif /* COFFEE_ADDRESS */

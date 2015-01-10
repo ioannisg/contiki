@@ -5,8 +5,8 @@
  *  Author: Ioannis Glaropoulos
  */ 
 #include "contiki.h"
-#include "platform/arduino_due_ath9170/xbee/xbee.h"
-#include "platform/arduino_due_ath9170/xbee/xbee-api.h"
+#include "xbee.h"
+#include "xbee-api.h"
 
 #include <string.h> /* for memcpy() */
 #include <stdio.h>
