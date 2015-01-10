@@ -1,0 +1,64 @@
+#Makefile for network configuration
+
+CONTIKI_NET_DIRS +=  $(CONTIKI)/projects/net
+CONTIKI_NET_SOURCEFILES += net-monitor.c
+
+# To be overwritten by custom configuration
+CONTIKI_WITH_XBEE=0
+CONTIKI_WITH_WIFI=0
+CONTIKI_WITH_ETHERNET=0
+CONTIKI_WITH_OTA=0
+
+ifeq ($(CONTIKI_WITH_ETH_NODE), 1)
+  CFLAGS += -DWITH_ETH_NODE_SUPPORT
+  CONTIKI_NET_SOURCEFILES += eth-node.c
+  CONTIKI_NET_DIRS += $(CONTIKI)/projects/net/eth-node
+  CONTIKI_WITH_ETHERNET=1
+  CONTIKI_WITH_OTA=1
+  # Use RIME byt,default. Only for compilation, as wireless stack is not linked
+  CONTIKI_WITH_RIME=1
+endif
+
+ifeq ($(CONTIKI_WITH_XBEE_NODE), 1)
+  CFLAGS += -DWITH_ZIGBEE_RPL_NODE_SUPPORT
+  CONTIKI_NET_SOURCEFILES += zigbee-rpl-node.c
+  CONTIKI_NET_DIRS += $(CONTIKI)/projects/net/zigbee-rpl-node
+  CONTIKI_WITH_XBEE=1
+  CONTIKI_WITH_OTA=1
+endif
+
+ifeq ($(CONTIKI_WITH_ETH_XBEE_ROUTER), 1)
+  CFLAGS += -DWITH_ETH_ZIGBEE_ROUTER_SUPPORT
+  CONTIKI_NET_SOURCEFILES += eth-zigbee-router.c
+  CONTIKI_NET_DIRS += $(CONTIKI)/projects/net/eth-zigbee-router
+  CONTIKI_WITH_XBEE=1
+  CONTIKI_WITH_ETHERNET=1
+  CONTIKI_WITH_OTA=1
+endif
+
+# Depending on the network drivers we include the corresponding network modules
+ifeq ($(CONTIKI_WITH_ETHERNET), 1)
+MODULES += core/net/mac/ieee8023
+endif
+
+ifeq ($(CONTIKI_WITH_WIFI), 1)
+MODULES += core/net/mac/ieee80211 core/net/ieee80211/include
+endif
+
+ifeq ($(CONTIKI_WITH_XBEE), 1)
+  ${info building XBEE core modules}
+  MODULES += core/net/mac/xbee
+endif
+
+ifeq ($(CONTIKI_WITH_OTA), 1)
+  APPS += ota-upgrade ota-debug
+endif
+
+# We do this for mullwifi that needs IEEE80211 structures
+CONTIKI_NET_DIRS += $(CONTIKI)/core/net/mac/ieee80211 $(CONTIKI)/core/net/mac/ieee80211/include
+
+# For the moment, just enable IPV6 by default
+CONTIKI_WITH_IPV6=1
+
+CONTIKI_SOURCEFILES += $(CONTIKI_NET_SOURCEFILES)
+CONTIKI_TARGET_DIRS += $(CONTIKI_NET_DIRS)
