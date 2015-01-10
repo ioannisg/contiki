@@ -63,6 +63,9 @@ CFLAGS += -DCONTIKI=1 -DCONTIKI_TARGET_$(TARGET_UPPERCASE)=1
 
 MODULES += core/sys core/dev core/lib
 
+# Include Makefile for network configuration
+-include $(CONTIKI)/projects/net/Makefile.net
+
 # Include IPv6, IPv4, and/or Rime
 
 HAS_STACK = 0
