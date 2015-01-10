@@ -56,16 +56,16 @@ CFLAGS += -fshort-enums -fomit-frame-pointer
 #CFLAGS += -Wall
 
 ##########  Linker flags
-LDFLAGS += -mcpu=cortex-m3 -mthumb -nostartfiles
+LDFLAGS += -mcpu=cortex-m3 -mthumb #-nostartfiles
 #Include source linker script
 LDFLAGS += -T $(LDSCRIPT)
 LDFLAGS += -Wl,--gc-sections
-#LDFLAGS += -Wl, --sort-section-alignment
+#LDFLAGS += -Wl,--sort-section-alignment
 LDFLAGS += -Wl,-Map=$(@:.elf=-$(TARGET).map),--cref,--no-warn-mismatch
 LDFLAGS += -Wl,--entry=Reset_Handler
 
 # Flags defined in ASF
-LDFLAGS += -lm -larm_cortexM3l_math -fpic
+LDFLAGS += -lgcc -lc -lm -larm_cortexM3l_math -fpic
 #LDFLAGS += -Wl,--start-group -lm -larm_cortexM3I_math -fpic -Wl,--end-group
 OBJCOPY_FLAGS += -O binary --gap-fill 0xff
 OBJDUMP_FLAGS += --disassemble --source --disassembler-options=force-thumb
@@ -79,13 +79,14 @@ CLEAN += symbols.c symbol.h *.d *.elf *.hex
 
 #CPU-dependent directories
 CONTIKI_CPU_DIRS += . dev
-CONTIKI_CPU_DIRS += ./common/utils ./common/utils/interrupt ./common/utils/stdio ./common/utils/stdio/stdio_serial
 
+CONTIKI_CPU_DIRS += ./common/utils ./common/utils/interrupt ./common/utils/stdio ./common/utils/stdio/stdio_serial
 CONTIKI_CPU_DIRS += ./common/boards
-CONTIKI_CPU_DIRS += ./common/services/delay ./common/services/clock ./common/services/gpio \
-                    ./common/services/ioport ./common/services/spi ./common/services/twi \
-                    ./common/services/serial ./common/services/sleepmgr ./common/services/usb \
-                    ./common/services/usb/class/vendor ./common/services/usb/class/vendor/host \
+CONTIKI_CPU_DIRS += ./common/services/delay ./common/services/delay/sam ./common/services/clock ./common/services/clock/sam3x \
+                    ./common/services/gpio ./common/services/gpio/sam_gpio ./common/services/ioport ./common/services/ioport/sam \
+                    ./common/services/spi ./common/services/spi/sam_spi ./common/services/twi ./common/service/twi/sam_twi \
+                    ./common/services/serial ./common/services/serial/sam_uart ./common/services/sleepmgr ./common/services/sleepmgr/sam \
+                    ./common/services/usb ./common/services/usb/class/vendor ./common/services/usb/class/vendor/host \
                     ./common/services/usb/uhc
 CONTIKI_CPU_DIRS += ./common/components/memory/sd_mmc
 
@@ -93,9 +94,8 @@ CONTIKI_CPU_DIRS += ./sam/utils
 CONTIKI_CPU_DIRS += ./sam/utils/cmsis/sam3x/include ./sam/utils/cmsis/sam3x/include/component
 CONTIKI_CPU_DIRS += ./sam/utils/cmsis/sam3x/include/instance ./sam/utils/cmsis/sam3x/include/pio
 CONTIKI_CPU_DIRS += ./sam/utils/cmsis/sam3x/source/templates ./sam/utils/cmsis/sam3x/source/templates/gcc
-CONTIKI_CPU_DIRS += ./sam/utils/preprocessor
-CONTIKI_CPU_DIRS += ./sam/utils/header_files
-CONTIKI_CPU_DIRS += ./sam/boards
+CONTIKI_CPU_DIRS += ./sam/utils/preprocessor ./sam/utils/header_files ./sam/utils/syscalls/gcc
+CONTIKI_CPU_DIRS += ./sam/boards ./sam/boards/arduino_due_x
 CONTIKI_CPU_DIRS += ./sam/drivers/efc ./sam/drivers/emac ./sam/drivers/pio ./sam/drivers/pmc ./sam/drivers/rstc \
 		    ./sam/drivers/spi ./sam/drivers/twi ./sam/drivers/tc ./sam/drivers/trng ./sam/drivers/uart \
                     ./sam/drivers/uotghs ./sam/drivers/usart ./sam/drivers/wdt
@@ -116,9 +116,17 @@ CONTIKI_CPU_SOURCEFILES += sd_mmc.c sd_mmc_spi.c sysclk.c cycle_counter.c sleepm
 CONTIKI_CPU_SOURCEFILES += init.c ethernet_phy.c ads7843.c flash_efc.c
 CONTIKI_CPU_SOURCEFILES += efc.c emac.c pio.c pio_handler.c pmc.c sleep.c rstc.c spi.c tc.c trng.c twi.c \
                            uart.c uotghs_host.c usart.c wdt.c
-CONTIKI_CPU_SOURCEFILES += cfs-coffe-arch.c clock.c ota_flash_utils.c rand.c rtimer-arch.c slip-uart1.c \
+CONTIKI_CPU_SOURCEFILES += clock.c rand.c rtimer-arch.c slip-uart1.c \
                            spi-arch.c uip-arch.c usb-drv.c watchdog.c
 CONTIKI_CPU_SOURCEFILES += pend-SV.c uart1.c usart1.c usb.c
+
+ifeq ($(CONTIKI_WITH_OTA), 1)
+  CONTIKI_CPU_SOURCEFILES += ota_flash_utils.c
+endif
+
+ifeq ($(CONTIKI_WITH_COFFEE), 1)
+  CONTIKI_CPU_SOURCEFILES += cfs-coffee-arch.c
+endif
 
 CONTIKI_SOURCEFILES += $(CONTIKI_CPU_SOURCEFILES)
 

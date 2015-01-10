@@ -67,7 +67,6 @@
 #include "uart_serial.h"
 #include "stdio_serial.h"
 #include "conf_uart_serial.h"
-#include "component/uart.h"
 #include "uart.h"
 
 #include "platform-conf.h"

@@ -16,7 +16,7 @@
 #include "compiler.h"
 #include "usb.h"
 #include "usbstack.h"
-#include "interrupt\interrupt_sam_nvic.h"
+#include "interrupt_sam_nvic.h"
 #include "uhc.h"
 #include "uhi_vendor.h"
 
