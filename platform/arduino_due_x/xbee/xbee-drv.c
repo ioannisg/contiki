@@ -499,8 +499,8 @@ xbee_drv_prepare_write_param(xbee_at_command_t *new_cmd, uint16_t cmd_id,
   case XBEE_API_MY_16:
   case XBEE_API_PAN_ID_16:
     new_cmd->len = 2;
-    new_cmd->data[0] = param[0];
-    new_cmd->data[1] = param[1];
+    new_cmd->data[0] = param[1];
+    new_cmd->data[1] = param[0];
     break;
   case XBEE_API_HV_VER_16:
   case XBEE_API_SRC_HI_16:

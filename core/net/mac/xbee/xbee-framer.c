@@ -5,10 +5,10 @@
  *  Author: Ioannis Glaropoulos <ioannisg@kth.se>
  */ 
 #include "xbee-api.h"
-#include "xbee.h"
 #include "linkaddr.h"
 #include "framer.h"
 #include "packetbuf.h"
+#include "random.h"
 
 #define DEBUG 0
 #if DEBUG
@@ -26,7 +26,7 @@
 static int
 hdr_length(void)
 {
-  return sizeof(xbee_at_frame_tx_hdr_t) + XBEE_SEQNO_SIZE;
+  return sizeof(xbee_at_frame_tx_hdr_t);
 }
 /*---------------------------------------------------------------------------*/
 static int
@@ -53,14 +53,19 @@ create(void)
       packetbuf_set_attr(PACKETBUF_ATTR_MAC_ACK, 1);
     }
     hdr->api_id = XBEE_AT_TX_FRAME_ID;
+#if XBEE_WITH_FRAME_SEQNO
     hdr->seqno = packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO);
-    hdr->frame_id = (((uint8_t)(hdr->seqno)) != 0) ? hdr->seqno : 1;
+#endif
+    hdr->frame_id = (((uint8_t)(packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO))) != 0) ? 
+      (uint8_t)(packetbuf_attr(PACKETBUF_ATTR_MAC_SEQNO)) : 1;
 #if DEBUG
     int i;
     PRINTF("XBEE-OUT: ");
     PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
     PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER));
+#if XBEE_WITH_FRAME_SEQNO
     PRINTF("SEQNO: %02x\n", hdr->seqno);
+#endif
     PRINTF("Frame ID %02x\n", hdr->frame_id);
     PRINTF("Frame Option: %02x\n", hdr->option);
     PRINTF("XBEE_FRAMER: (%u) ", packetbuf_totlen());
@@ -100,8 +105,12 @@ parse(void)
   } else {
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_node_addr);
   }
-  /* Register sequence number */ 
+  /* Register sequence number if option is suported */
+#if XBEE_WITH_FRAME_SEQNO 
   packetbuf_set_attr(PACKETBUF_ATTR_PACKET_ID, hdr->seqno);
+#else
+  packetbuf_set_attr(PACKETBUF_ATTR_PACKET_ID, random_rand());
+#endif
   packetbuf_set_attr(PACKETBUF_ATTR_FRAME_TYPE, FRAME802154_DATAFRAME);
   PRINTF("IEEE802154-IN: ");
   PRINTADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER));
@@ -109,7 +118,7 @@ parse(void)
   PRINTF("[%u]\n", packetbuf_datalen());
 
   /* Header parsed & removed */
-  if (packetbuf_hdrreduce(XBEE_RX_RF_HDR_SIZE + XBEE_SEQNO_SIZE))
+  if (packetbuf_hdrreduce(XBEE_RX_RF_HDR_SIZE))
     return XBEE_RX_RF_HDR_SIZE;
   
   return FRAMER_FAILED;

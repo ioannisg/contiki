@@ -1,4 +1,4 @@
-#include "xbee-api.h"
+#include "core/net/mac/xbee/xbee-api.h"
 #include "compiler.h"
 #include "process.h"
 #include "contiki-conf.h"
@@ -32,6 +32,8 @@ PROCESS_NAME(xbee_driver_process);
 #else
 #define XBEE_HANDLE_SYNC_OPERATIONS    1
 #endif
+
+
 
 typedef enum xbee_cmd_status {
 
@@ -110,83 +112,6 @@ extern volatile uint8_t xbee_frame_is_pending, xbee_sync_cmd_is_pending;
  * The frame ID of a pending synchronous AT Command
  */
 extern uint8_t xbee_sync_rsp_pending_id;
-
-typedef struct xbee_at_command xbee_at_command_t;
-
-/** The structure of a transmitted XBEE AT Command. */
-COMPILER_PACK_SET(1)
-typedef struct xbee_at_command {
-  xbee_at_command_t *next;
-  uint16_t len;
-  uint8_t frame_id;
-  uint8_t cmd_id[2];
-  uint8_t data[4];
-} xbee_at_command_t;
-
-/** The structure of a received XBEE AT Command Response Header. */
-COMPILER_PACK_SET(1)
-typedef struct xbee_at_command_rsp {
-  /* Frame ID */
-  uint8_t frame_id;
-  /* AT Command */
-  uint16_t cmd_id;
-  /* Status of the response */
-  uint8_t rsp_status;
-  /* Response values */
-  uint8_t value[XBEE_CMD_MAX_PAYLOAD_SIZE];
-} xbee_at_command_rsp_t;
-
-/** The structure of a transmitted XBEE Frame Header. */
-COMPILER_PACK_SET(1)
-typedef struct xbee_at_frame_tx_hdr {
-  /* API ID */
-  uint8_t api_id;
-  /* Frame ID */
-  uint8_t frame_id;
-  /* Source Link Layer Address */
-  uint8_t dst_addr[8];
-  /* Frame Options */
-  uint8_t option;
-  /* Sequence number */
-  uint16_t seqno;
-} xbee_at_frame_tx_hdr_t;
-
-/** The structure of a received XBEE Frame Header. */
-COMPILER_PACK_SET(1)
-typedef struct xbee_at_frame_rsp {
-  /* Source Link Layer Address */
-  uint8_t src_addr[8];
-  /* RSSI Value */
-  uint8_t rssi;
-  /* Frame Options */
-  uint8_t option;
-  /* Sequence number */
-  uint16_t seqno;
-  /* Frame payload */
-  uint8_t data[XBEE_RX_MAX_PAYLOAD_SIZE];
-} xbee_at_frame_rsp_t;
-
-/** The structure of a received XBEE TX Status response. */
-COMPILER_PACK_SET(1)
-typedef struct xbee_at_tx_status_rsp {
-  /* Frame ID */
-  uint8_t frame_id;
-  /* Frame transmission status */
-  uint8_t option;
-} xbee_at_tx_status_rsp_t;
-
-/* The general structure of an XBEE response. */
-COMPILER_PACK_SET(1)
-typedef struct xbee_response {
-  uint8_t len;
-  uint8_t api_id;
-  union {
-    xbee_at_frame_rsp_t frame_data;
-	 xbee_at_command_rsp_t cmd_data;
-    xbee_at_tx_status_rsp_t tx_status;
-  };
-} xbee_response_t;
-COMPILER_PACK_RESET();
 
 xbee_cmd_status_t xbee_drv_handle_device_response(xbee_response_t *rsp);
 uint8_t xbee_drv_has_pending_operations(void);

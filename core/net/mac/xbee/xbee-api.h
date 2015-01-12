@@ -7,13 +7,20 @@
 #ifndef XBEE_API_H_
 #define XBEE_API_H_
 
-#define XBEE_CMD_MAX_PAYLOAD_SIZE               8
-#define XBEE_TX_MAX_PAYLOAD_SIZE                (100-sizeof(uint16_t))
-#define XBEE_RX_MAX_PAYLOAD_SIZE                (100-sizeof(uint16_t))
+#include "contiki-conf.h"
 
-#define XBEE_TX_RF_HDR_SIZE                     10
-#define XBEE_SEQNO_SIZE                         sizeof(uint16_t)
-#define XBEE_RX_RF_HDR_SIZE                     10
+#ifdef XBEE_CONF_WITH_FRAME_SEQNO
+#define XBEE_WITH_FRAME_SEQNO XBEE_CONF_WITH_FRAME_SEQNO
+#else
+#define XBEE_WITH_FRAME_SEQNO                   0
+#endif
+
+#define XBEE_CMD_MAX_PAYLOAD_SIZE               8
+#define XBEE_TX_MAX_PAYLOAD_SIZE                (100 - (XBEE_WITH_FRAME_SEQNO)*sizeof(uint16_t)) 
+#define XBEE_RX_MAX_PAYLOAD_SIZE                (100 - (XBEE_WITH_FRAME_SEQNO)*sizeof(uint16_t))
+
+#define XBEE_TX_RF_HDR_SIZE                     (10 + (XBEE_WITH_FRAME_SEQNO)*sizeof(uint16_t))
+#define XBEE_RX_RF_HDR_SIZE                     (10 + (XBEE_WITH_FRAME_SEQNO)*sizeof(uint16_t))
 
 #define XBEE_TX_FRAME_HDR_SIZE                  3
 #define XBEE_TX_API_ID_HDR_SIZE                 1
@@ -162,5 +169,82 @@ typedef enum xbee_aes_encrypt_mode {
         XBEE_MAC_AES_ENCRYPT_DISABLE,
         XBEE_MAC_AES_ENCRYPT_ENABLE
 } xbee_aes_encrypt_mode_t;
+
+
+typedef struct xbee_at_command xbee_at_command_t;
+
+/** The structure of a transmitted XBEE AT Command. */
+#pragma pack(1)
+typedef struct xbee_at_command {
+	xbee_at_command_t *next;
+	uint16_t len;
+	uint8_t frame_id;
+	uint8_t cmd_id[2];
+	uint8_t data[4];
+} xbee_at_command_t;
+
+/** The structure of a received XBEE AT Command Response Header. */
+typedef struct xbee_at_command_rsp {
+	/* Frame ID */
+	uint8_t frame_id;
+	/* AT Command */
+	uint16_t cmd_id;
+	/* Status of the response */
+	uint8_t rsp_status;
+	/* Response values */
+	uint8_t value[XBEE_CMD_MAX_PAYLOAD_SIZE];
+} xbee_at_command_rsp_t;
+
+/** The structure of a transmitted XBEE Frame Header. */
+typedef struct xbee_at_frame_tx_hdr {
+	/* API ID */
+	uint8_t api_id;
+	/* Frame ID */
+	uint8_t frame_id;
+	/* Source Link Layer Address */
+	uint8_t dst_addr[8];
+	/* Frame Options */
+	uint8_t option;
+#if XBEE_WITH_FRAME_SEQNO
+	/* Sequence number */
+	uint16_t seqno;
+#endif
+} xbee_at_frame_tx_hdr_t;
+
+/** The structure of a received XBEE Frame Header. */
+typedef struct xbee_at_frame_rsp {
+	/* Source Link Layer Address */
+	uint8_t src_addr[8];
+	/* RSSI Value */
+	uint8_t rssi;
+	/* Frame Options */
+	uint8_t option;
+	#if XBEE_WITH_FRAME_SEQNO
+	/* Sequence number */
+	uint16_t seqno;
+	#endif
+	/* Frame payload */
+	uint8_t data[XBEE_RX_MAX_PAYLOAD_SIZE];
+} xbee_at_frame_rsp_t;
+
+/** The structure of a received XBEE TX Status response. */
+typedef struct xbee_at_tx_status_rsp {
+	/* Frame ID */
+	uint8_t frame_id;
+	/* Frame transmission status */
+	uint8_t option;
+} xbee_at_tx_status_rsp_t;
+
+/* The general structure of an XBEE response. */
+typedef struct xbee_response {
+	uint8_t len;
+	uint8_t api_id;
+	union {
+		xbee_at_frame_rsp_t frame_data;
+		xbee_at_command_rsp_t cmd_data;
+		xbee_at_tx_status_rsp_t tx_status;
+	};
+} xbee_response_t;
+#pragma pack();
 
 #endif /* XBEE-API_H_ */
