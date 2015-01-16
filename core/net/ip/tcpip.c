@@ -574,6 +574,21 @@ tcpip_ipv6_output(void)
 
       /* No route was found - we send to the default route instead. */
       if(route == NULL) {
+#if UIP_MULTI_IFACES
+        /* Don't send to default route if host has my prefix or any RPL prefix */
+        int k;
+        for (k=0; k<UIP_DS6_PREFIX_NB; k++) {
+          uip_ds6_prefix_t *prefix = &uip_ds6_prefix_list[k];
+          if (prefix != NULL && 
+            uip_ipaddr_prefixcmp(&UIP_IP_BUF->destipaddr, &prefix->ipaddr, 
+              prefix->length)) {
+            PRINTF("tcpip: no-def-route-for-rpl-prefixes\n");
+            uip_len = 0;
+            uip_out_if = 0;
+           return;
+          }
+        }
+#endif /* UIP_MULTI_IFACES */
         PRINTF("tcpip_ipv6_output: no route found, using default route\n");
         nexthop = uip_ds6_defrt_choose();
         if(nexthop == NULL) {
