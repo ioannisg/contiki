@@ -8,6 +8,7 @@ CONTIKI_WITH_XBEE=0
 CONTIKI_WITH_WIFI=0
 CONTIKI_WITH_ETHERNET=0
 CONTIKI_WITH_OTA=0
+NETSTACK_CONF_WITH_DUAL_RADIO=0
 
 ifeq ($(CONTIKI_WITH_ETH_NODE), 1)
   CFLAGS += -DWITH_ETH_NODE_SUPPORT
@@ -36,6 +37,16 @@ ifeq ($(CONTIKI_WITH_ETH_XBEE_ROUTER), 1)
   CONTIKI_WITH_OTA=1
 endif
 
+ifeq ($(CONTIKI_WITH_ETH_XBEE_ROUTER_DUAL_RADIO), 1)
+  CFLAGS += -DWITH_ETH_ZIGBEE_ROUTER_SUPPORT
+  CONTIKI_NET_SOURCEFILES += eth-zigbee-router.c
+  CONTIKI_NET_DIRS += $(CONTIKI)/projects/net/eth-zigbee-router
+  CONTIKI_WITH_XBEE=1
+  CONTIKI_WITH_ETHERNET=1
+  NETSTACK_CONF_WITH_DUAL_RADIO=1
+  CONTIKI_WITH_OTA=1
+endif
+
 # Depending on the network drivers we include the corresponding network modules
 ifeq ($(CONTIKI_WITH_ETHERNET), 1)
 MODULES += core/net/mac/ieee8023
@@ -46,8 +57,11 @@ MODULES += core/net/mac/ieee80211 core/net/ieee80211/include
 endif
 
 ifeq ($(CONTIKI_WITH_XBEE), 1)
-  ${info building XBEE core modules}
   MODULES += core/net/mac/xbee
+  ifeq ($(NETSTACK_CONF_WITH_DUAL_RADIO), 1)
+    MODULES += core/net/mac/xbee/dual-rf
+    CFLAGS += -DNETSTACK_CONF_WITH_DUAL_RADIO=1
+  endif
 endif
 
 ifeq ($(CONTIKI_WITH_OTA), 1)
