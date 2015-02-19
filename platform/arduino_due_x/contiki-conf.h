@@ -179,6 +179,9 @@
 /* Common configuration for IPv6. Set in Makefile for IPv6 support. */
 #if NETSTACK_CONF_WITH_IPV6 == 1
 
+#define NETSTACK_CONF_WITH_IP64                                                         0
+#define NETSTACK_CONF_WITH_RIPNG                                                        0
+
 /* TCP if CoAP is needed. Set in Makefile for CoAP support. */
 #if (WITH_COAP==7) || (WITH_COAP==6) || (WITH_COAP==3)
 #define UIP_CONF_TCP													0
@@ -190,14 +193,23 @@
 #define UIP_CONF_ICMP6												1
 
 /* Default is single interface: override on netop-conf.h */
-#define UIP_CONF_MULTI_IFACES										0
+#define UIP_CONF_MULTI_IFACES								0
 
-/* Default forwarding configuration */
-#define UIP_CONF_ROUTER												1
-#define UIP_CONF_ND6_SEND_NA										1
-#define UIP_CONF_ND6_SEND_RA										0
-#define UIP_CONF_ND6_MAX_PREFIXES								2
-#define UIP_CONF_ND6_MAX_DEFROUTERS								1
+/* Default is single radio: override on netop-conf.h */
+#define NETSTACK_CONF_WITH_DUAL_RADIO                                                   0
+/* Default is not sending RIO in RAs */
+#define UIP_CONF_DS6_ROUTE_INFORMATION                                                  0
+
+/* Default forwarding and router configuration */
+#define UIP_CONF_ROUTER                                                                 1
+#define UIP_CONF_ND6_SEND_NA                                                            1
+#define UIP_CONF_ND6_SEND_RA                                                            0
+#define UIP_RA_ADVERTIZE_DEFAULT_ROUTE                                                  0
+#define UIP_CONF_PROCESS_RA_ROUTER                                                      0
+#define UIP_CONF_DS6_RDNSS_INFORMATION                                                  0
+#define UIP_CONF_ND6_SEND_UNREACH_ROUTE                                                 0
+#define UIP_CONF_ND6_MAX_PREFIXES                                                       2
+#define UIP_CONF_ND6_MAX_DEFROUTERS                                                     1
 
 /* Default IPv6 configuration: override on netop-conf.h */
 #define UIP_CONF_IPV6												1
@@ -227,7 +239,7 @@
 #else
 #define UIP_CONF_LL_802154                               1
 #define UIP_CONF_LL_80211                                0
-#define UIP_CONF_BUFFER_SIZE                             256
+#define UIP_CONF_BUFFER_SIZE                                                           1280
 #endif
 
 /* IPv6 Configuration for each physical interface: Ethernet, WiFi, or ZigBee */
