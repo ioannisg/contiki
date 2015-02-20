@@ -14,7 +14,7 @@
 #endif /* NETSTACK_CONF_MAC */
 
 #ifndef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC     contikimac_driver
+#define NETSTACK_CONF_RDC     nullrdc_driver
 #endif /* NETSTACK_CONF_RDC */
 
 #ifndef NETSTACK_CONF_RDC_CHANNEL_CHECK_RATE
@@ -98,7 +98,7 @@
 #endif
 
 #ifndef CC2420_CONF_CHANNEL
-#define CC2420_CONF_CHANNEL              26
+#define CC2420_CONF_CHANNEL              16
 #endif /* CC2420_CONF_CHANNEL */
 
 #ifndef CC2420_CONF_CCA_THRESH
