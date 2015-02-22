@@ -118,7 +118,7 @@ CONTIKI_CPU_SOURCEFILES += efc.c emac.c pio.c pio_handler.c pmc.c sleep.c rstc.c
                            uart.c uotghs_host.c usart.c wdt.c
 CONTIKI_CPU_SOURCEFILES += clock.c rand.c rtimer-arch.c slip-uart1.c \
                            spi-arch.c uip-arch.c usb-drv.c watchdog.c
-CONTIKI_CPU_SOURCEFILES += pend-SV.c uart1.c usart1.c usb.c
+CONTIKI_CPU_SOURCEFILES += pend-SV.c uart0.c uart1.c usart1.c usart2.c usb.c
 
 ifeq ($(CONTIKI_WITH_OTA), 1)
   CONTIKI_CPU_SOURCEFILES += ota_flash_utils.c
