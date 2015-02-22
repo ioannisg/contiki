@@ -71,11 +71,15 @@ ifeq ($(CONTIKI_WITH_OTA), 1)
 endif
 
 ifeq ($(CONTIKI_WITH_DNS64), 1)
-  CFLAGS += -DWITH_DNS64_SUPPORT 
+  CFLAGS += -DWITH_DNS64_SUPPORT
+  MODULES += core/net/ip64 core/net/ip64-addr
+  CONTIKI_NET_DIRS += $(CONTIKI)/core/net/ip64 $(CONTIKI)/core/net/ip64-addr
 endif
 
 ifeq ($(CONTIKI_WITH_IP64), 1)
   CFLAGS += -DWITH_IP64_SUPPORT 
+  MODULES += core/net/ip64 core/net/ip64-addr
+  CONTIKI_NET_DIRS += $(CONTIKI)/core/net/ip64 $(CONTIKI)/core/net/ip64-addr
 endif
 
 CFLAGS += -DREST=$(REST)
