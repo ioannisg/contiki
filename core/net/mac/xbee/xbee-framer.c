@@ -10,8 +10,8 @@
 #include "packetbuf.h"
 #include "random.h"
 #if NETSTACK_CONF_WITH_DUAL_RADIO
+#include "netstack_x.h"
 #include "linkaddrx.h"
-#include "netstack_c.h"
 #endif
 
 #define DEBUG 0
@@ -111,28 +111,22 @@ parse(void)
 #if ! NETSTACK_CONF_WITH_DUAL_RADIO
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
 #else
-    if (radio_type == NETSTACK_802154) {
-      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_null);
-    } else if (radio_type == NETSTACK_802154_SEC) {
+    if (radio_type == NETSTACK_802154)
+      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, (linkaddr_t *)&linkaddr_null);
+    else if (radio_type == NETSTACK_802154_SEC)
       packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, (linkaddr_t *)&linkaddr1_null);
-    } else {
-      return FRAME_FAILED;
-    }
-#endif /* NETSTACK_CONF_WITH_DUAL_RADIO */
+#endif /* NETSTACK_WITH_DUAL_RADIO */
   } else {
 #if ! NETSTACK_CONF_WITH_DUAL_RADIO
     packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_node_addr);
 #else
-    if (radio_type == NETSTACK_802154) {
-      packetbuf_set_addr(PACKETBUD_ADDR_RECEIVER, &linkaddr_node_addr);
-    } else if (radio_type == NETSTACK_802154_SEC) {
-      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, (linkaddr_t *)&linkaddr1_node_addr);
-    } else {
-      return FRAME_FAILED;
-    }
-#endif /* NETSTACK_CONF_WITH_DUAL_RADIO */
+    if (radio_type == NETSTACK_802154)
+      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr_node_addr);
+    else if (radio_type == NETSTACK_802154_SEC)
+      packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &linkaddr1_node_addr);
+#endif
   }
-  /* Register sequence number if option is suported */
+  /* Register sequence number if option is supported */
 #if XBEE_WITH_FRAME_SEQNO 
   packetbuf_set_attr(PACKETBUF_ATTR_PACKET_ID, hdr->seqno);
 #else

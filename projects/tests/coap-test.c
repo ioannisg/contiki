@@ -12,22 +12,27 @@
 #define COAP_TEST_PERIOD_MIN 1
 #endif
 
+#ifdef NET_PROC_H
+#include NET_PROC_H
+#endif
+
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 #if DEBUG
 #include "resolv.h"
 #endif
+#include "net-monitor.h"
 
 #define LOCAL_PORT      UIP_HTONS(COAP_DEFAULT_PORT + 1)
 #define REMOTE_PORT     UIP_HTONS(COAP_DEFAULT_PORT)
 
 /* Example URIs that can be queried. */
-#define NUM_OF_URLS 2
+#define NUM_OF_URLS 3
 /* leading and ending slashes only for demo purposes, 
  * get cropped automatically when setting the Uri-Path
  */
-static const char *service_urls[NUM_OF_URLS] = { ".well-known/core",  "time"};
+static const char *service_urls[NUM_OF_URLS] = { ".well-known/core",  "time", "contiki-router"};
 static struct etimer et;
 static uint16_t coap_test_valid_rsp = 0;
 /*---------------------------------------------------------------------------*/
@@ -53,18 +58,23 @@ client_chunk_handler(void *response)
 }
 /*---------------------------------------------------------------------------*/
 PROCESS(coap_client_test_process, "coap-client-test");
+AUTOSTART_PROCESSES(&coap_client_test_process);
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(coap_client_test_process, ev, data)
 {
   PROCESS_BEGIN();
   UNUSED(data);
+  
+  while(!process_is_running(&(NET_PROC))) {
+    PROCESS_PAUSE();
+  }
   /* This way the packet can be treated as pointer as usual. */
   static coap_packet_t request[1];
   /* receives all CoAP messages */
   coap_init_engine();
   /* Prepare request, TID is set by COAP_BLOCKING_REQUEST() */
-  coap_init_message(request, COAP_TYPE_CON, COAP_GET, 0);
-  coap_set_header_uri_path(request, service_urls[1]);
+  coap_init_message(request, COAP_TYPE_CON, COAP_PUT, 0);
+  coap_set_header_uri_path(request, service_urls[2]);
   etimer_set(&et, CLOCK_SECOND*60*COAP_TEST_PERIOD_MIN);
   
   while(1) {
@@ -75,8 +85,8 @@ PROCESS_THREAD(coap_client_test_process, ev, data)
       == RESOLV_STATUS_CACHED) {
       PRINT6ADDR(jupiter_addr);
       PRINTF("\n");
-      const char msg[] = "test";
-      coap_set_payload(request, (uint8_t *)msg, sizeof(msg) - 1);
+      const char *msg = "arduino-router";
+      coap_set_payload(request, (uint8_t *)msg, strlen(msg));
       PRINTF("sending coap req\n");
       COAP_BLOCKING_REQUEST(jupiter_addr, REMOTE_PORT, request, client_chunk_handler);
     } else {
