@@ -10,6 +10,7 @@ CONTIKI_WITH_WIFI=0
 CONTIKI_WITH_ETHERNET=0
 CONTIKI_WITH_OTA=0
 NETSTACK_CONF_WITH_DUAL_RADIO=0
+REST=coap_rest_implementation
 
 ifeq ($(CONTIKI_WITH_ETH_NODE), 1)
   CFLAGS += -DWITH_ETH_NODE_SUPPORT
@@ -76,6 +77,8 @@ endif
 ifeq ($(CONTIKI_WITH_IP64), 1)
   CFLAGS += -DWITH_IP64_SUPPORT 
 endif
+
+CFLAGS += -DREST=$(REST)
 
 # We do this for mullwifi that needs IEEE80211 structures
 CONTIKI_NET_DIRS += $(CONTIKI)/core/net/mac/ieee80211 $(CONTIKI)/core/net/mac/ieee80211/include

@@ -11,7 +11,7 @@ CONTIKI_WITH_XBEE_NODE=1
 CONTIKI_WITH_DNS64=1
 
 # Add REST implementation
-CFLAGS += -DREST=coap_rest_implementation
+REST=coap_rest_implementation
 
 # Add CoAP engine
 APPS += er-coap rest-engine
