@@ -1,3 +1,34 @@
+/**
+ * \addtogroup uip
+ * @{
+ */
+
+/**
+ * \defgroup uipdns uIP hostname resolver functions
+ * @{
+ *
+ * The uIP DNS resolver functions are used to lookup a hostname and
+ * map it to a numerical IP address. It maintains a list of resolved
+ * hostnames that can be queried with the resolv_lookup()
+ * function. New hostnames can be resolved using the resolv_query()
+ * function.
+ *
+ * The event resolv_event_found is posted when a hostname has been
+ * resolved. It is up to the receiving process to determine if the
+ * correct hostname has been found by calling the resolv_lookup()
+ * function with the hostname.
+ */
+
+/**
+ * \file
+ *         DNS host name to IP address resolver.
+ * \author Adam Dunkels <adam@dunkels.com>
+ * \author Robert Quattlebaum <darco@deepdarc.com>
+ *
+ *         This file implements a DNS host name to IP address resolver,
+ *         as well as an MDNS responder and resolver.
+ */
+
 /*
  * Copyright (c) 2002-2003, Adam Dunkels.
  * All rights reserved.
@@ -31,44 +62,22 @@
  *
  */
 
-/**
- * \file
- *         DNS host name to IP address resolver.
- * \author Adam Dunkels <adam@dunkels.com>
- * \author Robert Quattlebaum <darco@deepdarc.com>
- *
- *         This file implements a DNS host name to IP address resolver,
- *         as well as an MDNS responder and resolver.
- */
-
-/**
- * \addtogroup uip
- * @{
- */
-
-/**
- * \defgroup uipdns uIP hostname resolver functions
- * @{
- *
- * The uIP DNS resolver functions are used to lookup a hostname and
- * map it to a numerical IP address. It maintains a list of resolved
- * hostnames that can be queried with the resolv_lookup()
- * function. New hostnames can be resolved using the resolv_query()
- * function.
- *
- * The event resolv_event_found is posted when a hostname has been
- * resolved. It is up to the receiving process to determine if the
- * correct hostname has been found by calling the resolv_lookup()
- * function with the hostname.
- */
-
 #include "net/ip/tcpip.h"
 #include "net/ip/resolv.h"
 #include "net/ip/uip-udp-packet.h"
 #include "lib/random.h"
-
+#define DEBUG 1
 #ifndef DEBUG
 #define DEBUG CONTIKI_TARGET_COOJA
+#endif
+
+#if NETSTACK_CONF_WITH_DNS64
+#include "ip64-addr.h"
+#endif
+
+#if UIP_MULTI_IFACES
+#include "net/ipv6/uip-ds6.h"
+uip_ds6_iface_t *resolv_multicast_iface;
 #endif
 
 #if UIP_UDP
@@ -85,6 +94,7 @@
 #define __SDCC 1
 #endif
 
+#define VERBOSE_DEBUG 1
 #if VERBOSE_DEBUG
 #define DEBUG_PRINTF(...) printf(__VA_ARGS__)
 #else
@@ -227,6 +237,9 @@ struct dns_hdr {
   uint16_t numextrarr;
 };
 
+#define RESOLV_ENCODE_INDEX(i) (uip_htons(i+1))
+#define RESOLV_DECODE_INDEX(i) (unsigned char)(uip_ntohs(i-1))
+
 /** These default values for the DNS server are Google's public DNS:
  *  <https://developers.google.com/speed/public-dns/docs/using>
  */
@@ -234,9 +247,9 @@ static uip_ipaddr_t resolv_default_dns_server =
 #if NETSTACK_CONF_WITH_IPV6
   { { 0x20, 0x01, 0x48, 0x60, 0x48, 0x60, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x88, 0x88 } };
-#else /* NETSTACK_CONF_WITH_IPV6 */
+#else /* UIP_CONF_IPV6 */
   { { 8, 8, 8, 8 } };
-#endif /* NETSTACK_CONF_WITH_IPV6 */
+#endif /* UIP_CONF_IPV6 */
 
 /** \internal The DNS answer message structure. */
 struct dns_answer {
@@ -261,7 +274,6 @@ struct namemap {
 #define STATE_DONE   4
   uint8_t state;
   uint8_t tmr;
-  uint16_t id;
   uint8_t retries;
   uint8_t seqno;
 #if RESOLV_SUPPORTS_RECORD_EXPIRATION
@@ -317,9 +329,9 @@ static const uip_ipaddr_t resolv_mdns_addr =
   { { 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfb } };
 #include "net/ipv6/uip-ds6.h"
-#else  /* NETSTACK_CONF_WITH_IPV6 */
+#else  /* UIP_CONF_IPV6 */
   { { 224, 0, 0, 251 } };
-#endif /* NETSTACK_CONF_WITH_IPV6 */
+#endif /* UIP_CONF_IPV6 */
 static int mdns_needs_host_announce;
 
 PROCESS(mdns_probe_process, "mDNS probe");
@@ -504,14 +516,36 @@ start_name_collision_check(clock_time_t after)
 static unsigned char *
 mdns_write_announce_records(unsigned char *queryptr, uint8_t *count)
 {
+  struct dns_answer *ans;
+
 #if NETSTACK_CONF_WITH_IPV6
   uint8_t i;
 
+#if UIP_MULTI_IFACES
+  uint8_t j;
+  for(j = 0; j < UIP_DS6_IFACES_NUM; j++) {
+    if(uip_ds6_ifaces[j].status < UIP_DS6_IFACE_STATUS_NOT_STARTED) {
+      continue;
+	 }
+#if NETSTACK_CONF_WITH_DNS64
+  // UGLY HACK add the DNS address as mine, so it will be transmitted in the announcement packet
+  // FIXME XXX
+  if (uip_ds6_ifaces[j].ll_type == NETSTACK_8023)
+    uip_ds6_addr_add(&uip_ds6_ifaces[j], &resolv_default_dns_server, 0, ADDR_PREFERRED);
+#endif
+#endif /* UIP_MULTI_IFACES */
   for(i = 0; i < UIP_DS6_ADDR_NB; ++i) {
+#if ! UIP_MULTI_IFACES
     if(uip_ds6_if.addr_list[i].isused
 #if !RESOLV_CONF_MDNS_INCLUDE_GLOBAL_V6_ADDRS
        && uip_is_addr_link_local(&uip_ds6_if.addr_list[i].ipaddr)
 #endif
+#else /* UIP_MULTI_IFACES */
+    if(uip_ds6_ifaces[j].netif.addr_list[i].isused
+#if !RESOLV_CONF_MDNS_INCLUDE_GLOBAL_V6_ADDRS
+       && uip_is_addr_link_local(&uip_ds6_ifaces[j].netif.addr_list[i].ipaddr)
+#endif
+#endif /* UIP_MULTI_IFACES */
       ) {
       if(!*count) {
         queryptr = encode_name(queryptr, resolv_hostname);
@@ -520,6 +554,7 @@ mdns_write_announce_records(unsigned char *queryptr, uint8_t *count)
         *queryptr++ = 0xc0;
         *queryptr++ = sizeof(struct dns_hdr);
       }
+      ans = (struct dns_answer *)queryptr;
 
       *queryptr++ = (uint8_t) ((NATIVE_DNS_TYPE) >> 8);
       *queryptr++ = (uint8_t) ((NATIVE_DNS_TYPE));
@@ -535,14 +570,29 @@ mdns_write_announce_records(unsigned char *queryptr, uint8_t *count)
       *queryptr++ = 0;
       *queryptr++ = sizeof(uip_ipaddr_t);
 
+#if ! UIP_MULTI_IFACES
       uip_ipaddr_copy((uip_ipaddr_t*)queryptr, &uip_ds6_if.addr_list[i].ipaddr);
+#else
+      uip_ipaddr_copy((uip_ipaddr_t*)queryptr, &uip_ds6_ifaces[j].netif.addr_list[i].ipaddr);
+#if NETSTACK_CONF_WITH_DNS64
+      // Ugly hack: restore by removing the dns address
+      if (uip_ds6_ifaces[j].ll_type == NETSTACK_8023
+        && uip_ipaddr_cmp(&resolv_default_dns_server, &uip_ds6_ifaces[j].netif.addr_list[i].ipaddr)) {
+        uip_ds6_addr_t * _ipaddr = uip_ds6_addr_lookup_iface(&uip_ds6_ifaces[j], &resolv_default_dns_server);
+        if (_ipaddr) {
+          uip_ds6_addr_rm(&uip_ds6_ifaces[j], _ipaddr);
+        }
+      }
+#endif
+#endif
       queryptr += sizeof(uip_ipaddr_t);
       ++(*count);
     }
   }
-#else /* NETSTACK_CONF_WITH_IPV6 */
-  struct dns_answer *ans;
-
+#if UIP_MULTI_IFACES
+  }
+#endif /* UIP_MULTI_IFACES */
+#else /* UIP_CONF_IPV6 */
   queryptr = encode_name(queryptr, resolv_hostname);
   ans = (struct dns_answer *)queryptr;
   ans->type = UIP_HTONS(NATIVE_DNS_TYPE);
@@ -553,7 +603,7 @@ mdns_write_announce_records(unsigned char *queryptr, uint8_t *count)
   uip_gethostaddr((uip_ipaddr_t *) ans->ipaddr);
   queryptr = (unsigned char *)ans + sizeof(*ans);
   ++(*count);
-#endif /* NETSTACK_CONF_WITH_IPV6 */
+#endif /* UIP_CONF_IPV6 */
   return queryptr;
 }
 /*---------------------------------------------------------------------------*/
@@ -587,18 +637,20 @@ mdns_prep_host_announce_packet(void)
       0x00,
       0x00,
       0x08,
-#else /* NETSTACK_CONF_WITH_IPV6 */
+#else /* UIP_CONF_IPV6 */
       0x40,
       0x00,
       0x00,
       0x00,
-#endif /* NETSTACK_CONF_WITH_IPV6 */
+#endif /* UIP_CONF_IPV6 */
     }
   };
 
   unsigned char *queryptr;
 
   uint8_t total_answers = 0;
+
+  struct dns_answer *ans;
 
   /* Be aware that, unless `ARCH_DOESNT_NEED_ALIGNED_STRUCTS` is set,
    * writing directly to the uint16_t members of this struct is an error. */
@@ -698,8 +750,7 @@ check_entries(void)
       }
       hdr = (struct dns_hdr *)uip_appdata;
       memset(hdr, 0, sizeof(struct dns_hdr));
-      hdr->id = random_rand();
-      namemapptr->id = hdr->id;
+      hdr->id = RESOLV_ENCODE_INDEX(i);
 #if RESOLV_CONF_SUPPORTS_MDNS
       if(!namemapptr->is_mdns || namemapptr->is_probe) {
         hdr->flags1 = DNS_FLAG1_RD;
@@ -720,8 +771,18 @@ check_entries(void)
       } else
 #endif /* RESOLV_CONF_SUPPORTS_MDNS */
       {
+#if ! NETSTACK_CONF_WITH_DNS64
         *query++ = (uint8_t) ((NATIVE_DNS_TYPE) >> 8);
         *query++ = (uint8_t) ((NATIVE_DNS_TYPE));
+#else
+        if (namemapptr->is_mdns) {
+          *query++ = (uint8_t) ((NATIVE_DNS_TYPE) >> 8);
+          *query++ = (uint8_t) ((NATIVE_DNS_TYPE));
+        } else {
+          *query++ = (uint8_t) ((DNS_TYPE_A) >> 8);
+          *query++ = (uint8_t) ((DNS_TYPE_A));
+		  }
+#endif /* NETSTACK_CONF_WITH_DNS64 */
       }
       *query++ = (uint8_t) ((DNS_CLASS_IN) >> 8);
       *query++ = (uint8_t) ((DNS_CLASS_IN));
@@ -738,9 +799,20 @@ check_entries(void)
           query = mdns_write_announce_records(query, &count);
           hdr->numauthrr = UIP_HTONS(count);
         }
+#if UIP_MULTI_IFACES
+        int i;
+		  for (i=0; i<UIP_DS6_IFACES_NUM; i++) {
+          uip_out_if = &uip_ds6_ifaces[i];
+          if (uip_out_if->status > UIP_DS6_IFACE_STATUS_NOT_REGISTERED)
+            uip_udp_packet_sendto(resolv_conn, uip_appdata,
+              (query - (uint8_t *) uip_appdata),
+              &resolv_mdns_addr, UIP_HTONS(MDNS_PORT));
+		  }
+#else /* UIP_MULTI_IFACES */
         uip_udp_packet_sendto(resolv_conn, uip_appdata,
                               (query - (uint8_t *) uip_appdata),
                               &resolv_mdns_addr, UIP_HTONS(MDNS_PORT));
+#endif /* UIP_MULTI_IFACES */
 
         PRINTF("resolver: (i=%d) Sent MDNS %s for \"%s\".\n", i,
                namemapptr->is_probe?"probe":"request",namemapptr->name);
@@ -834,6 +906,9 @@ newdata(void)
 
       if(((uip_ntohs(question->class) & 0x7FFF) != DNS_CLASS_IN) ||
          ((question->type != UIP_HTONS(DNS_TYPE_ANY)) &&
+#if RESOLV_CONF_REPLY_TO_ALL_TYPES
+          (question->type != UIP_HTONS(DNS_TYPE_A)) &&
+#endif
           (question->type != UIP_HTONS(NATIVE_DNS_TYPE)))) {
         /* Skip unrecognised records. */
         continue;
@@ -851,6 +926,10 @@ newdata(void)
          */
         if(UIP_UDP_BUF->srcport == UIP_HTONS(MDNS_PORT)) {
           mdns_announce_requested();
+#if UIP_MULTI_IFACES
+        /* Multi-cast only on the interface it came from */
+        resolv_multicast_iface = uip_in_if;
+#endif
         } else {
           uip_udp_packet_sendto(resolv_conn, uip_appdata,
                                 mdns_prep_host_announce_packet(),
@@ -899,13 +978,10 @@ newdata(void)
   } else
 #endif /* RESOLV_CONF_SUPPORTS_MDNS */
   {
-    for(i = 0; i < RESOLV_ENTRIES; ++i) {
-      namemapptr = &names[i];
-      if(namemapptr->state == STATE_ASKING &&
-         namemapptr->id == hdr->id) {
-        break;
-      }
-    }
+    /* The ID in the DNS header should be our entry into the name table. */
+    i = RESOLV_DECODE_INDEX(hdr->id);
+
+    namemapptr = &names[i];
 
     if(i >= RESOLV_ENTRIES || i < 0 || namemapptr->state != STATE_ASKING) {
       PRINTF("resolver: DNS response has bad ID (%04X) \n", uip_ntohs(hdr->id));
@@ -959,14 +1035,24 @@ newdata(void)
     /* Check the class and length of the answer to make sure
      * it matches what we are expecting
      */
+#if ! NETSTACK_CONF_WITH_DNS64
     if(((uip_ntohs(ans->class) & 0x7FFF) != DNS_CLASS_IN) ||
        (ans->len != UIP_HTONS(sizeof(uip_ipaddr_t)))) {
       goto skip_to_next_answer;
     }
+#else
+    if(((uip_ntohs(ans->class) & 0x7FFF) != DNS_CLASS_IN) ||
+       (ans->len != UIP_HTONS(sizeof(uip_ip6addr_t)) &&
+       (ans->len != UIP_HTONS(sizeof(uip_ip4addr_t))))) {
+      goto skip_to_next_answer;
+    }
+#endif
 
+#if ! NETSTACK_CONF_WITH_DNS64
     if(ans->type != UIP_HTONS(NATIVE_DNS_TYPE)) {
       goto skip_to_next_answer;
     }
+#endif
 
 #if RESOLV_CONF_SUPPORTS_MDNS
     if(UIP_UDP_BUF->srcport == UIP_HTONS(MDNS_PORT) &&
@@ -1038,7 +1124,25 @@ newdata(void)
     namemapptr->expiration += clock_seconds();
 #endif /* RESOLV_SUPPORTS_RECORD_EXPIRATION */
 
+#if ! NETSTACK_CONF_WITH_DNS64
     uip_ipaddr_copy(&namemapptr->ipaddr, (uip_ipaddr_t *) ans->ipaddr);
+#else
+    if (ans->type == UIP_HTONS(DNS_TYPE_AAAA)) {
+      /* Check if response contains a DNS address, having the NAT64 prefix */
+      uip_ip4addr_t candidate_dns_addr;
+      if (ip64_addr_6to4((uip_ipaddr_t *)&ans->ipaddr, &candidate_dns_addr)) {
+        PRINTF("resolver: found-nat64-addr-in-list\n");
+        resolv_conf((uip_ipaddr_t *)&ans->ipaddr);
+      } else {
+        uip_ipaddr_copy(&namemapptr->ipaddr, (uip_ipaddr_t *) ans->ipaddr);
+		}
+    } else if (ans->type == UIP_HTONS(DNS_TYPE_A)) {
+      /* Use NAT64 prefix to create an AAAA from A */
+      uip_ipaddr_t addr;
+      ip64_addr_4to6((uip_ip4addr_t *)ans->ipaddr, &addr);
+      uip_ipaddr_copy(&namemapptr->ipaddr, &addr);
+    }
+#endif /* NETSTACK_CONF_WITH_DN64 */
 
     resolv_found(namemapptr->name, &namemapptr->ipaddr);
 
@@ -1141,7 +1245,18 @@ PROCESS_THREAD(resolv_process, ev, data)
   uip_udp_bind(resolv_conn, UIP_HTONS(MDNS_PORT));
 
 #if NETSTACK_CONF_WITH_IPV6
+#if ! UIP_MULTI_IFACES
   uip_ds6_maddr_add(&resolv_mdns_addr);
+#else
+  int k;
+  for (k=0; k<UIP_DS6_IFACES_NUM; k++) {
+    uip_ds6_iface_t *iface = &uip_ds6_ifaces[k];
+    if (iface->status < UIP_DS6_IFACE_STATUS_IDLE) {
+      continue;
+    }
+    uip_ds6_maddr_add(iface, &resolv_mdns_addr);
+  }
+#endif
 #else
   /* TODO: Is there anything we need to do here for IPv4 multicast? */
 #endif
@@ -1151,7 +1266,6 @@ PROCESS_THREAD(resolv_process, ev, data)
 
   while(1) {
     PROCESS_WAIT_EVENT();
-
     if(ev == PROCESS_EVENT_TIMER) {
       tcpip_poll_udp(resolv_conn);
     } else if(ev == tcpip_event) {
@@ -1170,9 +1284,26 @@ PROCESS_THREAD(resolv_process, ev, data)
             memset(uip_appdata, 0, sizeof(struct dns_hdr));
 
             len = mdns_prep_host_announce_packet();
-
+#if UIP_MULTI_IFACES
+            if (resolv_multicast_iface != NULL) {
+              uip_out_if = resolv_multicast_iface;
+              uip_udp_packet_sendto(resolv_conn, uip_appdata,
+                len, &resolv_mdns_addr, UIP_HTONS(MDNS_PORT));
+	         } else {
+              int i;
+              for (i=0; i<UIP_DS6_IFACES_NUM; i++) {
+                uip_ds6_iface_t *iface = &uip_ds6_ifaces[i];
+                if (iface->status > UIP_DS6_IFACE_STATUS_NOT_REGISTERED) {
+                  uip_out_if = iface;
+                  uip_udp_packet_sendto(resolv_conn, uip_appdata,
+                    len, &resolv_mdns_addr, UIP_HTONS(MDNS_PORT));
+                }
+              }
+            }
+#else /* UIP_MULTI_IFACES */
             uip_udp_packet_sendto(resolv_conn, uip_appdata,
                                   len, &resolv_mdns_addr, UIP_HTONS(MDNS_PORT));
+#endif /* UIP_MULTI_IFACES */
 
             mdns_needs_host_announce = 0;
 
@@ -1197,16 +1328,6 @@ PROCESS_THREAD(resolv_process, ev, data)
   }
 
   PROCESS_END();
-}
-/*---------------------------------------------------------------------------*/
-static void
-init(void)
-{
-  static uint8_t initialized = 0;
-  if(!initialized) {
-    process_start(&resolv_process, NULL);
-    initialized = 1;
-  }
 }
 /*---------------------------------------------------------------------------*/
 #if RESOLV_AUTO_REMOVE_TRAILING_DOTS
@@ -1242,8 +1363,6 @@ resolv_query(const char *name)
 
   register struct namemap *nameptr = 0;
 
-  init();
-  
   lseq = lseqi = 0;
 
   /* Remove trailing dots, if present. */
@@ -1330,9 +1449,9 @@ resolv_lookup(const char *name, uip_ipaddr_t ** ipaddr)
 #if NETSTACK_CONF_WITH_IPV6
     { { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 } };
-#else /* NETSTACK_CONF_WITH_IPV6 */
+#else /* UIP_CONF_IPV6 */
     { { 127, 0, 0, 1 } };
-#endif /* NETSTACK_CONF_WITH_IPV6 */
+#endif /* UIP_CONF_IPV6 */
     if(ipaddr) {
       *ipaddr = &loopback;
     }
@@ -1380,8 +1499,7 @@ resolv_lookup(const char *name, uip_ipaddr_t ** ipaddr)
 
 #if VERBOSE_DEBUG
   switch (ret) {
-  case RESOLV_STATUS_CACHED:
-    if(ipaddr) {
+  case RESOLV_STATUS_CACHED:{
       PRINTF("resolver: Found \"%s\" in cache.\n", name);
       const uip_ipaddr_t *addr = *ipaddr;
 
