@@ -76,7 +76,7 @@
  * UART interface. We should handle all interrupts, however we'll
  * concentrate on Receive and Error interrupts.
  */
-#define uart_irq_handler	UART_Handler
+#define uart_irq_handler	UART0_Handler
 /*---------------------------------------------------------------------------*/
 
 /* This is the receive interrupt handler. */

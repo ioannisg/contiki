@@ -45,6 +45,21 @@ ota_flash_store_chunk(uint8_t * _data, uint16_t data_len)
   return 1;
 }
 /*---------------------------------------------------------------------------*/
+void
+ota_flash_reset(void)
+{
+  uint16_t i;
+  __disable_irq();
+  /* Disable SysTick */
+  SysTick->CTRL = 0;
+  /* Disable IRQs & clear pending IRQs */
+  for (i = 0; i < 8; i++) {
+    NVIC->ICER[i] = 0xFFFFFFFF;
+    NVIC->ICPR[i] = 0xFFFFFFFF;
+  }
+  NVIC_SystemReset();  /* Swap the whole flash bank(s) */
+}
+/*---------------------------------------------------------------------------*/
 uint8_t
 ota_flash_swap(void)
 {

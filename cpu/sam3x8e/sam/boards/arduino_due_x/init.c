@@ -171,11 +171,13 @@ void board_init(void)
 #ifdef CONF_BOARD_USART_RXD
 	/* Configure USART RXD pin */
 	gpio_configure_pin(PIN_USART0_RXD_IDX, PIN_USART0_RXD_FLAGS);
+	gpio_configure_pin(PIN_USART3_RXD_IDX, PIN_USART3_RXD_FLAGS);
 #endif
 
 #ifdef CONF_BOARD_USART_TXD
 	/* Configure USART TXD pin */
 	gpio_configure_pin(PIN_USART0_TXD_IDX, PIN_USART0_TXD_FLAGS);
+	gpio_configure_pin(PIN_USART3_TXD_IDX, PIN_USART3_TXD_FLAGS);
 #endif
 
 #ifdef CONF_BOARD_USB_PORT
