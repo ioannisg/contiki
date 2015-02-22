@@ -30,6 +30,13 @@
 
 #if WITH_ETHERNET_SUPPORT
 
+#ifdef ENC424J600_DRV_CONF_FILTER_IPV4_BCAST
+#define ENC424J600_DRV_FILTER_IPV4_BCAST ENC424J600_DRV_CONF_FILTER_IPV4_BCAST
+#else
+#include "mini_ip.h"
+#define ENC424J600_DRV_FILTER_IPV4_BCAST 1
+#endif
+
 static void enc424j600_drv_reset(void);
 
 PROCESS(enc424j600_drv_proc, "ENC424J600_drv_proc");
@@ -47,7 +54,15 @@ static linkaddr0_t enc424j600_macaddr;
 
 RINGMEM(enc424j600_ringmem, 2048);
 
+static uint32_t overflow_count = 0;
+
 static enc424j600_drv_status_t enc424j600_status;
+/*---------------------------------------------------------------------------*/
+uint32_t
+enc424j600_get_overflow_counter(void)
+{
+  return overflow_count;
+} 
 /*---------------------------------------------------------------------------*/
 static void
 enc424j600_drv_irq_handle_rx(void)
@@ -63,10 +78,18 @@ enc424j600_drv_irq_handle_rx(void)
 	  PRINTF("enc424j600_drv: too-large-rx %u\n", pkt_len);
 	  return;
   }
-
+#if ENC424J600_DRV_FILTER_IPV4_BCAST
+#define IEEE8023_BCAST_ADDR { { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff } }
+  static linkaddr0_t bcast_addr = IEEE8023_BCAST_ADDR;
+  ethernet_header_t *header = (ethernet_header_t *)enc424j600_get_recv_frame_ptr();
+  if (linkaddr0_cmp((linkaddr0_t *)header, &bcast_addr)) {
+    return;
+  }
+#endif /* ENC424J600_DRV_FILTER_IPV4_BCAST */
   if (!ringmem_alloc(enc424j600_ringmem, enc424j600_get_recv_frame_ptr(), 
     pkt_len)) {
-    printf("enc424j600_drv: ringmem-full\n");
+    overflow_count++;
+    PRINTF("enc424j600_drv: ringmem-full\n");
 	 return;
   }
 #if 0
