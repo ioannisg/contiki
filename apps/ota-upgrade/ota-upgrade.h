@@ -27,7 +27,7 @@ enum ota_pkt_type {
   OTA_HDR_FIN_NACK,
 };
 
-COMPILER_PACK_SET(1);
+#pragma pack(1)
 /** \brief Structure of the application layer header of the OTA upgrade protocol */
 typedef struct ota_upgrd_hdr {
   uint8_t type;                /* Frame Control, packet type [START/DATA/ etc.]*/
@@ -35,11 +35,12 @@ typedef struct ota_upgrd_hdr {
   uint16_t seqno;              /* The sequence number of the uploaded firmware chunk */
   uint16_t len;                /* Length of payload */
 } ota_upgrd_hdr_t;
-COMPILER_PACK_RESET();
+#pragma pack()
 
 uint8_t ota_flash_store_chunk(uint8_t * _data, uint16_t data_len);
 uint8_t ota_flash_swap(void);
 uint8_t ota_flash_get_fw_bank(void);
+void ota_flash_reset(void);
 
 PROCESS_NAME(ota_upgrade_process);
 

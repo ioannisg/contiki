@@ -1,7 +1,8 @@
 #Makefile for network configuration
 
-CONTIKI_NET_DIRS +=  $(CONTIKI)/projects/net $(CONTIKI)/projects/net/net-monitor
+CONTIKI_NET_DIRS +=  $(CONTIKI)/projects/net $(CONTIKI)/projects/net/net-monitor $(CONTIKI)/projects/net/net-monitor/resources
 CONTIKI_NET_SOURCEFILES += net-monitor.c
+include $(CONTIKI)/projects/net/net-monitor/resources/Makefile.resource
 
 # To be overwritten by custom configuration
 CONTIKI_WITH_XBEE=0

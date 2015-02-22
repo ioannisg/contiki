@@ -70,8 +70,8 @@
 #include "net/netstack.h"
 #include "net/netstack_x.h"
 
-#if UIP_CONF_MULTI_IFACES
-#include "assert.h
+#if UIP_MULTI_IFACES
+#include "assert.h"
 #endif
 
 #include <stdio.h>
@@ -266,14 +266,17 @@ static struct timer reass_timer;
 
 static int last_rssi;
 
-#if (defined UIP_CONF_MULTI_IFACES) && (UIP_CONF_MULTI_IFACES != 0)
-/** \brief a pointer to the corresponding UIP_DS6 interface structure */
-static uip_ds6_iface_t *uip_iface = NULL;
+#if (defined UIP_MULTI_IFACES) && (UIP_MULTI_IFACES != 0)
+static uip_ds6_iface_t *uip_iface = NULL; /** \brief a pointer to the corresponding DS6 interface */
+#if NETSTACK_CONF_WITH_DUAL_RADIO
+#include "linkaddrx.h"
+#define NETSTACK_WITH_DUAL_RADIO 1
+static uip_ds6_iface_t *uip_iface_sec = NULL;
+#endif /* NETSTACK_WITH_DUAL_RADIO */
 #else
-/** \brief a link type variable */
 netstack_link_type_t link_if;
 #endif /* UIP_MULTI_IFACES */
-
+uint32_t sicslowpan_dropped_pkt_stats = 0;
 /*-------------------------------------------------------------------------*/
 /* Rime Sniffer support for one single listener to enable powertrace of IP */
 /*-------------------------------------------------------------------------*/
@@ -282,44 +285,44 @@ static struct rime_sniffer *callback = NULL;
 void
 rime_sniffer_add(struct rime_sniffer *s)
 {
-  callback = s;
+	callback = s;
 }
 
 void
 rime_sniffer_remove(struct rime_sniffer *s)
 {
-  callback = NULL;
+	callback = NULL;
 }
 
 static void
 set_packet_attrs()
 {
-  int c = 0;
-  /* set protocol in NETWORK_ID */
-  packetbuf_set_attr(PACKETBUF_ATTR_NETWORK_ID, UIP_IP_BUF->proto);
+	int c = 0;
+	/* set protocol in NETWORK_ID */
+	packetbuf_set_attr(PACKETBUF_ATTR_NETWORK_ID, UIP_IP_BUF->proto);
 
-  /* assign values to the channel attribute (port or type + code) */
-  if(UIP_IP_BUF->proto == UIP_PROTO_UDP) {
-    c = UIP_UDP_BUF->srcport;
-    if(UIP_UDP_BUF->destport < c) {
-      c = UIP_UDP_BUF->destport;
-    }
-  } else if(UIP_IP_BUF->proto == UIP_PROTO_TCP) {
-    c = UIP_TCP_BUF->srcport;
-    if(UIP_TCP_BUF->destport < c) {
-      c = UIP_TCP_BUF->destport;
-    }
-  } else if(UIP_IP_BUF->proto == UIP_PROTO_ICMP6) {
-    c = UIP_ICMP_BUF->type << 8 | UIP_ICMP_BUF->icode;
-  }
+	/* assign values to the channel attribute (port or type + code) */
+	if(UIP_IP_BUF->proto == UIP_PROTO_UDP) {
+		c = UIP_UDP_BUF->srcport;
+		if(UIP_UDP_BUF->destport < c) {
+			c = UIP_UDP_BUF->destport;
+		}
+		} else if(UIP_IP_BUF->proto == UIP_PROTO_TCP) {
+		c = UIP_TCP_BUF->srcport;
+		if(UIP_TCP_BUF->destport < c) {
+			c = UIP_TCP_BUF->destport;
+		}
+		} else if(UIP_IP_BUF->proto == UIP_PROTO_ICMP6) {
+		c = UIP_ICMP_BUF->type << 8 | UIP_ICMP_BUF->icode;
+	}
 
-  packetbuf_set_attr(PACKETBUF_ATTR_CHANNEL, c);
+	packetbuf_set_attr(PACKETBUF_ATTR_CHANNEL, c);
 
-/*   if(uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr)) { */
-/*     own = 1; */
-/*   } */
+	/*   if(uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr)) { */
+		/*     own = 1; */
+		/*   } */
 
-}
+	}
 
 
 
@@ -465,7 +468,6 @@ uncompress_addr(uip_ipaddr_t *ipaddr, uint8_t const prefix[],
 #else
     uip_ds6_set_addr_iid(ipaddr, lladdr, NETSTACK_802154);
 #endif
-
   }
 
   PRINT6ADDR(ipaddr);
@@ -1333,9 +1335,22 @@ packet_sent(void *ptr, int status, int transmissions)
   if (status != 0) {
     PRINTF("sicslowpan: tx-status:%u\n", status);
   }
+#if ! NETSTACK_WITH_DUAL_RADIO
   uip_ds6_link_neighbor_callback(uip_iface, status, transmissions);
+#else
+  switch(packetbuf_attr(PACKETBUF_ATTR_RADIO_INTERFACE)) {
+  case NETSTACK_802154:
+    uip_ds6_link_neighbor_callback(uip_iface, status, transmissions);
+    break;
+  case NETSTACK_802154_SEC:
+    uip_ds6_link_neighbor_callback(uip_iface_sec, status, transmissions);
+    break;
+  default:
+    return;
+  }
+#endif /*  NETSTACK_WITH_DUAL_RADIO */
 #endif
-  
+
   if(callback != NULL) {
     callback->output_callback(status);
   }
@@ -1361,7 +1376,12 @@ send_packet(linkaddr_t *dest)
 #if ! UIP_CONF_MULTI_IFACES
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER,(void*)&uip_lladdr);
 #else
+#if ! NETSTACK_WITH_DUAL_RADIO
   packetbuf_set_addr(PACKETBUF_ADDR_SENDER,(void*)&uip_iface->lladdr);
+#else
+  packetbuf_set_addr(PACKETBUF_ADDR_SENDER,(void*)&uip_out_if->lladdr);
+  packetbuf_set_attr(PACKETBUF_ATTR_RADIO_INTERFACE, uip_out_if->ll_type);
+#endif /* NETSTACK_WITH_DUAL_RADIO */
 #endif /* UIP_CONF_MULTI_IFACES */
 #endif
 
@@ -1390,7 +1410,7 @@ send_packet(linkaddr_t *dest)
  */
 static uint8_t
 output(const uip_lladdr_t *localdest)
-{
+{	
   int framer_hdrlen;
   int max_payload;
 
@@ -1438,10 +1458,28 @@ output(const uip_lladdr_t *localdest)
    * broadcast packet.
    */
   if(localdest == NULL) {
+#if ! NETSTACK_CONF_WITH_DUAL_RADIO
     linkaddr_copy(&dest, &linkaddr_null);
+#else
+    switch (uip_out_if->ll_type) {
+    case NETSTACK_802154:
+      linkaddr_copy(&dest, &linkaddr_null);
+      break;
+    case NETSTACK_802154_SEC:
+      linkaddr1_copy((linkaddr1_t *)&dest, &linkaddr1_null);
+      break;
+    default:
+      PRINTF("sicslowpan: invalid-outgoing-radio-iface %u\n",
+        uip_out_if->ll_type);
+      return 0;
+    }
+#endif
   } else {
     linkaddr_copy(&dest, (const linkaddr_t *)localdest);
   }
+#if NETSTACK_CONF_WITH_DUAL_RADIO
+  packetbuf_set_attr(PACKETBUF_ATTR_RADIO_INTERFACE, uip_out_if->ll_type);
+#endif
   
   PRINTFO("sicslowpan output: sending packet len %d\n", uip_len);
 
@@ -1620,7 +1658,7 @@ output(const uip_lladdr_t *localdest)
  */
 static void
 input(void)
-{
+{	
 #if UIP_MULTI_IFACES
   if (unlikely(uip_len != 0 || uip_in_if != NULL || uip_out_if != NULL)) {
     PRINTF("sicslowpan: non-empty-uip; drop. %u %u %u\n",
@@ -1634,7 +1672,8 @@ input(void)
     PRINTF("sicslowpan: non-empty-uip; drop.\n");
     return;
   }
-#endif /* UIP_MULTI_IFACES */
+  #endif /* UIP_MULTI_IFACES */
+
   /* size of the IP packet (read from fragment) */
   uint16_t frag_size = 0;
   /* offset of the fragment in the IP packet */
@@ -1721,11 +1760,15 @@ input(void)
 
   if(!is_fragment) {
     /* Prioritize non-fragment packets too. */
+    if (sicslowpan_len > 0) {
+      sicslowpan_dropped_pkt_stats++;
+    }
     sicslowpan_len = 0;
     processed_ip_in_len = 0;
   } else if(processed_ip_in_len > 0 && first_fragment
       && !linkaddr_cmp(&frag_sender, packetbuf_addr(PACKETBUF_ADDR_SENDER))) {
-    sicslowpan_len = 0;
+    sicslowpan_dropped_pkt_stats++;
+	 sicslowpan_len = 0;
     processed_ip_in_len = 0;
   }
 #endif /* PRIORITIZE_NEW_PACKETS */
@@ -1892,11 +1935,24 @@ input(void)
       callback->input_callback();
     }
 #if UIP_MULTI_IFACES
-    /* Set the interface pointer before calling the UIP input method */
+#if ! NETSTACK_WITH_DUAL_RADIO
     uip_in_if = uip_iface;
+#else
+    switch(packetbuf_attr(PACKETBUF_ATTR_RADIO_INTERFACE)) {
+    case NETSTACK_802154:
+      uip_in_if = uip_iface;
+      break;
+    case NETSTACK_802154_SEC:
+      uip_in_if = uip_iface_sec;
+      break;
+    default:
+      PRINTF("sicslowpan: input: wrong-radio-type\n");
+      return;
+   }
+#endif
 #endif /* UIP_MULTI_IFACES */
-
     tcpip_input();
+    sicslowpan_len = 0;
 #if SICSLOWPAN_CONF_FRAG
   }
 #endif /* SICSLOWPAN_CONF_FRAG */
@@ -1983,6 +2039,41 @@ sicslowpan_connect(uint8_t up)
    */
   tcpip_set_outputfunc(output);
 #else /* UIP_MULTI_IFACES */
+#if NETSTACK_WITH_DUAL_RADIO
+  /* Register the interface with UIP-DS6 */
+  switch(packetbuf_attr(PACKETBUF_ATTR_RADIO_INTERFACE)) {
+  case NETSTACK_802154:
+    if (uip_iface != NULL) {
+      PRINTF("sicslowpan: iface-not-null:%u\n", NETSTACK_802154);
+      return;
+	 }
+    if ((uip_iface = uip_ds6_register_net_iface(NETSTACK_802154,
+      &linkaddr_node_addr, output)) == NULL) {
+      PRINTF("sicslowpan: interface%u registration failed\n", NETSTACK_802154);
+      return;
+    }
+    /* Inform TCP/IP stack so it can start the interface */
+    process_post(&tcpip_process, uip_ds6_iface_event, uip_iface);
+    break;
+  case NETSTACK_802154_SEC:
+    if (uip_iface_sec != NULL) {
+      PRINTF("sicslowpan: iface-not-null:%u\n", NETSTACK_802154_SEC);
+      return;
+	 }
+    if ((uip_iface_sec = uip_ds6_register_net_iface(NETSTACK_802154_SEC,
+      (linkaddr_t *)&linkaddr1_node_addr, output)) == NULL) {
+      PRINTF("sicslowpan: interface%u registration failed\n",
+        NETSTACK_802154_SEC);
+      return;
+    }
+    /* Inform TCP/IP stack so it can start the interface */
+    process_post(&tcpip_process, uip_ds6_iface_event, uip_iface_sec);
+    break;
+  default:
+    PRINTF("sicslowpan: invalid-radio-interface-type\n");
+    return;
+  }  
+#else /* NETSTACK_WITH_DUAL_RADIO */
   /* Register the interface with UIP-DS6 */
   if ((uip_iface = uip_ds6_register_net_iface(NETSTACK_802154, 
     &linkaddr_node_addr, output)) == NULL) {
@@ -1991,9 +2082,9 @@ sicslowpan_connect(uint8_t up)
   }
   /* Inform TCP/IP stack so it can start the interface */
   process_post(&tcpip_process, uip_ds6_iface_event, uip_iface);
+#endif /* NETSTACK_WITH_DUAL_RADIO */
 #endif /* UIP_MULTI_IFACES */
 }
-/*--------------------------------------------------------------------*/
 const struct network_driver sicslowpan_driver = {
   "sicslowpan",
   sicslowpan_init,
