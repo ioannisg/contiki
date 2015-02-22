@@ -29,6 +29,9 @@ otg_debug_send_debug_msg()
 #define NPRINTF(...)
 #endif
 
+#ifndef OTA_UPGRADE_TIMEOUT
+#define OTA_UPGRADE_TIMEOUT 60
+#endif
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 
@@ -49,7 +52,8 @@ typedef enum ota_upgrade_fsm_state {
 static struct uip_udp_conn *ota_udp_conn;
 static ota_upgrade_fsm_state_t ota_fsm_state;
 static uint16_t next_seq_num = 0;
-
+static struct etimer et;
+/*---------------------------------------------------------------------------*/
 static void
 ota_upgrade_reset(void)
 {
@@ -211,7 +215,7 @@ ota_upgrade_init(void)
   /* Initialize flash, if not already */
   uint32_t result = COFFEE_INIT();
   if (result) {
-    PRINTF("ota_upgrade: flash-init-err %u\n\r", (unsigned int)result);
+    PRINTF("ota_upgrade: flash-init-err%u\n\r", (unsigned int)result);
     return 0;
   } 
   return 1;
@@ -221,21 +225,20 @@ static void
 tcpip_handler(void)
 {  
   if (uip_newdata()) {
-	 ota_upgrade_process_data(uip_appdata);
-	 
-	 /* Reply to client if required */
-	 if (uip_datalen()) {
+    ota_upgrade_process_data(uip_appdata);
+ 
+    /* Reply to client if required */
+    if (uip_datalen()) {
       uip_ipaddr_copy(&ota_udp_conn->ripaddr, &UIP_IP_BUF->srcipaddr);
-		uip_udp_packet_send(ota_udp_conn, uip_appdata, uip_datalen());
-		uip_create_unspecified(&ota_udp_conn->ripaddr);
-	 }
+      uip_udp_packet_send(ota_udp_conn, uip_appdata, uip_datalen());
+      uip_create_unspecified(&ota_udp_conn->ripaddr);
+    }
   }
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(ota_upgrade_process, ev, data)
 {
-  PROCESS_BEGIN();
-  
+  PROCESS_BEGIN();  
   UNUSED(data);
   
   while (!process_is_running(&NET_PROC)) {
@@ -248,16 +251,22 @@ PROCESS_THREAD(ota_upgrade_process, ev, data)
   NPRINTF("ota_upgrade: standby\n");
   while(1) {
     PROCESS_YIELD();
-    if (ev == tcpip_event)
+    if (ev == PROCESS_EVENT_TIMER && etimer_expired(&et)) {
+      if (ota_fsm_state == OTA_UPGRADE_FLASHING) {
+        if (!ota_flash_swap()) {
+          PRINTF("ota_upgrade: unsuccessful\n\r");
+        }
+      } else {
+        ota_upgrade_reset();
+      }
+	 }
+    if (ev == tcpip_event) {
       tcpip_handler();
-    if (ota_fsm_state == OTA_UPGRADE_FLASHING) {
-      NPRINTF("ota_upgrade: reprogramming...\n");
-      if (!ota_flash_swap()) {
-        PRINTF("ota_upgrade: unsuccessful\n\r");
-		}
+      if (ota_fsm_state != OTA_UPGRADE_NULL) {
+	     etimer_set(&et, CLOCK_SECOND*OTA_UPGRADE_TIMEOUT);
+      }
     }
   }
-
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/

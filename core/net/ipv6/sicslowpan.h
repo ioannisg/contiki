@@ -234,7 +234,7 @@ struct sicslowpan_addr_context {
  * \brief check whether we can compress the IID in
  * address 'a' to 16 bits.
  * This is used for unicast addresses only, and is true
- * if the address is on the format \<PREFIX\>::0000:00ff:fe00:XXXX
+ * if the address is on the format <PREFIX>::0000:00ff:fe00:XXXX
  * NOTE: we currently assume 64-bits prefixes
  */
 #define sicslowpan_is_iid_16_bit_compressable(a) \
@@ -323,5 +323,6 @@ int sicslowpan_get_last_rssi(void);
 
 extern const struct network_driver sicslowpan_driver;
 
+extern uint32_t sicslowpan_dropped_pkt_stats;
 #endif /* SICSLOWPAN_H_ */
 /** @} */
