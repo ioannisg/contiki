@@ -41,6 +41,9 @@
 #define XBEE_AT_TX_STATUS_RSP_ID                0x89
 #define XBEE_AT_MODEM_STATUS_RSP                0x8a
 
+#define XBEE_AT_MODEM_RSP_HWRST                 0x00
+#define XBEE_AT_MODEM_RSP_WDT                   0x01
+
 #define XBEE_DEFAULT_FRAME_ID                   0x01
 // XBee will not generate a TX Status Packet if this frame id sent
 #define XBEE_NO_RSP_FRAME_ID                    0x00
@@ -235,16 +238,22 @@ typedef struct xbee_at_tx_status_rsp {
 	uint8_t option;
 } xbee_at_tx_status_rsp_t;
 
+/** Modem response */
+typedef struct xbee_at_modem_rsp {
+  uint8_t status;
+} xbee_at_modem_rsp_t;
+
 /* The general structure of an XBEE response. */
 typedef struct xbee_response {
-	uint8_t len;
-	uint8_t api_id;
-	union {
-		xbee_at_frame_rsp_t frame_data;
-		xbee_at_command_rsp_t cmd_data;
-		xbee_at_tx_status_rsp_t tx_status;
+  uint8_t len;
+  uint8_t api_id;
+  union {
+    xbee_at_frame_rsp_t frame_data;
+    xbee_at_command_rsp_t cmd_data;
+    xbee_at_tx_status_rsp_t tx_status;
+    xbee_at_modem_rsp_t modem_status;
 	};
 } xbee_response_t;
-#pragma pack();
+#pragma pack()
 
 #endif /* XBEE-API_H_ */

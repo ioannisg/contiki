@@ -1,6 +1,6 @@
 #Makefile for network configuration
 
-CONTIKI_NET_DIRS +=  $(CONTIKI)/projects/net
+CONTIKI_NET_DIRS +=  $(CONTIKI)/projects/net $(CONTIKI)/projects/net/net-monitor
 CONTIKI_NET_SOURCEFILES += net-monitor.c
 
 # To be overwritten by custom configuration
@@ -66,6 +66,14 @@ endif
 
 ifeq ($(CONTIKI_WITH_OTA), 1)
   APPS += ota-upgrade ota-debug
+endif
+
+ifeq ($(CONTIKI_WITH_DNS64), 1)
+  CFLAGS += -DWITH_DNS64_SUPPORT 
+endif
+
+ifeq ($(CONTIKI_WITH_IP64), 1)
+  CFLAGS += -DWITH_IP64_SUPPORT 
 endif
 
 # We do this for mullwifi that needs IEEE80211 structures

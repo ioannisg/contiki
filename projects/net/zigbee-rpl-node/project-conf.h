@@ -39,7 +39,7 @@
 #ifdef PACKETBUF_CONF_SIZE
 #undef PACKETBUF_CONF_SIZE
 #endif
-#define PACKETBUF_CONF_SIZE                   256
+#define PACKETBUF_CONF_SIZE                   512
 #ifdef PACKETBUF_CONF_HDR_SIZE
 #undef PACKETBUF_CONF_HDR_SIZE
 #endif
@@ -71,6 +71,43 @@
 #undef UIP_CONF_IPV6_RPL
 #endif
 #define UIP_CONF_IPV6_RPL					       1
+
+/* Routing information objects included in RA packets */
+#ifdef UIP_CONF_DS6_ROUTE_INFORMATION
+#undef UIP_CONF_DS6_ROUTE_INFORMATION
+#endif
+#define UIP_CONF_DS6_ROUTE_INFORMATION        1
+
+/* We increase the neighbor table size */
+#ifdef NBR_TABLE_CONF_MAX_NEIGHBORS
+#undef NBR_TABLE_CONF_MAX_NEIGHBORS
+#endif
+#define NBR_TABLE_CONF_MAX_NEIGHBORS          8
+
+/* We increase the size of the CSMA queue */
+#ifdef CSMA_CONF_MAX_NEIGHBOR_QUEUES
+#undef CSMA_CONF_MAX_NEIGHBOR_QUEUES
+#endif
+#define CSMA_CONF_MAX_NEIGHBOR_QUEUES         4
+
+/* We just increase the connection limit to 8 */
+#undef UIP_CONF_MAX_CONNECTIONS
+#define UIP_CONF_MAX_CONNECTIONS              8
+#undef UIP_CONF_UDP_CONNS
+#define UIP_CONF_UDP_CONNS                    8
+
+/* If the router supports NAT64 we must not filter out IPv4 */
+#if WITH_DNS64_SUPPORT
+#undef NETSTACK_CONF_WITH_DNS64
+#define NETSTACK_CONF_WITH_DNS64              1
+#endif
+
+/* REST chunk size is set to 256, double the default size */
+#define REST_MAX_CHUNK_SIZE                   256
+
+#ifndef CONTIKI_CONF_DEFAULT_HOSTNAME
+#define CONTIKI_CONF_DEFAULT_HOSTNAME         "contiki-xbee-node"
+#endif
 
 #endif /* ZIGBEE_RPL_NODE */
 #endif /* PROJECT_NETOP_CONF_H_ */
