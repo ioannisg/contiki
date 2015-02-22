@@ -204,10 +204,10 @@
 #define UIP_CONF_ROUTER                                                                 1
 #define UIP_CONF_ND6_SEND_NA                                                            1
 #define UIP_CONF_ND6_SEND_RA                                                            0
-#define UIP_RA_ADVERTIZE_DEFAULT_ROUTE                                                  0
+#define UIP_RA_ADVERTISE_DEFAULT_ROUTE                                                  0
 #define UIP_CONF_PROCESS_RA_ROUTER                                                      0
 #define UIP_CONF_DS6_RDNSS_INFORMATION                                                  0
-#define UIP_CONF_ND6_SEND_UNREACH_ROUTE                                                 0
+#define UIP_ICMP_SEND_UNREACH_ROUTE                                                     0
 #define UIP_CONF_ND6_MAX_PREFIXES                                                       2
 #define UIP_CONF_ND6_MAX_DEFROUTERS                                                     1
 
