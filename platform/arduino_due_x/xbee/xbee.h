@@ -1,6 +1,7 @@
-#include "core/net/mac/xbee/xbee-api.h"
-#include "compiler.h"
+#include "xbee-api.h"
+#include "xbee-public.h"
 #include "process.h"
+#include "netstack_x.h"
 #include "contiki-conf.h"
 /*
  * xbee.h
@@ -33,7 +34,69 @@ PROCESS_NAME(xbee_driver_process);
 #define XBEE_HANDLE_SYNC_OPERATIONS    1
 #endif
 
+#ifdef XBEE_CONF_WITH_DUAL_RADIO
+#define XBEE_WITH_DUAL_RADIO XBEE_CONF_WITH_DUAL_RADIO
+#else
+#define XBEE_WITH_DUAL_RADIO           0
+#endif
 
+#ifdef XBEE_SERIAL_LINE_CONF_BUFSIZE
+#define XBEE_BUFSIZE XBEE_SERIAL_LINE_CONF_BUFSIZE
+#else /* SERIAL_LINE_CONF_BUFSIZE */
+#define XBEE_BUFSIZE                   128
+#endif /* SERIAL_LINE_CONF_BUFSIZE */
+
+#if (XBEE_BUFSIZE & (XBEE_BUFSIZE - 1)) != 0
+#error XBEE_SERIAL_LINE_CONF_BUFSIZE must be a power of two (i.e., 1, 2, 4, 8, 16, 32, 64, ...).
+#error "Change XBEE_SERIAL_LINE_CONF_BUFSIZE in contiki-conf.h."
+#endif
+
+typedef enum {
+  XBEE_SERIAL_DEV_PRIMAL = NETSTACK_802154,
+  XBEE_SERIAL_DEV_SECOND = NETSTACK_802154_SEC,
+} xbee_dev_num_t;
+
+/** XBEE serial line statistics */
+typedef struct xbee_dev_stats {
+  uint16_t sfd_err;
+  uint16_t msb_err;
+  uint16_t lsb_err;
+  uint16_t pkt_err;
+  uint16_t cmd_err;
+  uint16_t ovf_err;
+#if XBEE_HANDLE_SYNC_OPERATIONS
+  uint16_t ovf_on_err;
+#endif
+  uint16_t tx_pkt_count;
+  uint16_t rx_pkt_count;
+  uint8_t rst_count;
+} xbee_dev_stats_t;
+
+/** XBEE configuration */
+typedef struct xbee_dev_config {
+  uint8_t channel;
+  uint8_t channel_sec;
+  uint16_t panid;
+  uint8_t mac_mode;
+  uint8_t power;
+  uint16_t my_addr;  
+  uint8_t api;
+} xbee_dev_config_t;
+
+/** The structure of an XBEE serial device */
+typedef struct xbee_device {
+  uint32_t baudrate;
+  struct ringbuf *buf;
+#if XBEE_HANDLE_SYNC_OPERATIONS
+  struct ringbuf *onbuf;
+#endif
+  xbee_dev_num_t sdev;
+  xbee_dev_stats_t *stats;
+  void ( *writeb)(unsigned char c);
+  uint8_t ptr;
+  uint8_t esc;
+  uint8_t rsp[XBEE_BUFSIZE];
+} xbee_device_t;
 
 typedef enum xbee_cmd_status {
 
@@ -41,7 +104,7 @@ typedef enum xbee_cmd_status {
 	XBEE_STATUS_ERR,
 	XBEE_STATUS_INV_CMD,
 	XBEE_STATUS_INV_ARG,
-	XBEE_STATUS_NO_RSP
+	XBEE_STATUS_NO_RSP,
 } xbee_cmd_status_t;
 
 /**
@@ -104,19 +167,24 @@ extern process_event_t xbee_driver_cmd_event;
 extern process_event_t xbee_drv_device_response;
 
 /**
- * Flags indicating that a frame/command has been transmitted and a response is pending
+ * The XBEE device structure
  */
-extern volatile uint8_t xbee_frame_is_pending, xbee_sync_cmd_is_pending;
+extern xbee_device_t xbee_dev;
 
+#if XBEE_WITH_DUAL_RADIO
 /**
- * The frame ID of a pending synchronous AT Command
+ * The secondary XBEE device structure
  */
-extern uint8_t xbee_sync_rsp_pending_id;
+extern xbee_device_t xbee_dev0;
+#endif
 
-xbee_cmd_status_t xbee_drv_handle_device_response(xbee_response_t *rsp);
-uint8_t xbee_drv_has_pending_operations(void);
+/* Internal API */
+uint8_t xbee_drv_has_pending_operations(xbee_device_t *dev);
+uint8_t xbee_drv_has_pending_cmd(xbee_device_t *dev);
 void xbee_drv_check_response(void *data);
-uint8_t xbee_send_asynchronous_cmd(const xbee_at_command_t* cmd);
-void xbee_send_byte_stream_down(uint8_t* _data, uint8_t len);
+uint8_t xbee_send_asynchronous_cmd(xbee_device_t *dev, const xbee_at_command_t* cmd);
+void xbee_send_byte_stream_down(xbee_device_t *dev, uint8_t* _data, uint8_t len);
 void xbee_serial_line_init(unsigned long baudrate);
+void xbee_serial_line_reset(xbee_device_t *device);
+void xbee_do_hw_reset(xbee_device_t *device);
 #endif /* XBEE_H_ */

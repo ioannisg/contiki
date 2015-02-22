@@ -41,5 +41,5 @@ typedef struct enc424j600_drv_status {
 	unsigned int link_tx_err : 1;
 #endif
 } enc424j600_drv_status_t;
-
+uint32_t enc424j600_get_overflow_counter(void);
 #endif /* ENC424J600-DRV_H_ */

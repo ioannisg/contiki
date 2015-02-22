@@ -4,13 +4,14 @@
  * Created: 2014-08-18 18:18:30
  *  Author: Ioannis Glaropoulos
  */ 
-#include "wire_digital.h"
+#include "platform/arduino_due_ath9170/arduino/wire_digital.h"
 #include "enc424J600-conf.h"
 #include "enc424j600.h"
 #include "enc424j600-spi.h"
 
 #include "delay.h"
 
+#include "contiki-conf.h"
 #define DEBUG 0
 #if DEBUG
 #include <stdio.h>
@@ -263,6 +264,9 @@ enc424j600_init(void)
 	  ERXFCON_MCEN |
 #ifdef PROMISCUOUS_MODE	  
 	   //ERXFCON_NOTMEEN | 
+#endif
+#if NETSTACK_CONF_WITH_IP64
+     ERXFCON_BCEN |
 #endif
 	  //ERXFCON_BCEN)))
 	  0)))
