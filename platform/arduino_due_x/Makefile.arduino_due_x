@@ -88,7 +88,7 @@ login:
 	$(CONTIKI)/tools/arduino_due_x/bossac -i -d --port=ttyACM0 -U false -e -w -b $<
 endif
 
-ifeq ADDRESS
+ifdef ADDRESS
 %.ota_upgrade: %.bin
 	${info Over-the-air upgrading using $(CONTIKI)/tools/arduino_due_x/ota_upgrade.jar}
 	java -jar $(CONTIKI)/tools/arduino_due_x/ota_upgrade.jar $(ADDRESS) 1234 4321 "$<"
