@@ -10,10 +10,6 @@
 #include "rest-engine.h"
 #include "net-monitor.h"
 
-#if WITH_ETHERNET_SUPPORT
-#include "enc424j600-drv.h" // FIXME - this should be platform-independent
-#endif
-
 /*---------------------------------------------------------------------------*/
 static uint8_t
 print_ifaces(char *msg)
@@ -54,21 +50,12 @@ res_get_handler(void *request, void *response, uint8_t *buffer,
   uint16_t preferred_size, int32_t *offset)
 {
   const char *len = NULL;
-  const char *eth_stats = NULL;
   size_t var_len = 0;
   
   char message[REST_MAX_CHUNK_SIZE];
   memset(message, 0, REST_MAX_CHUNK_SIZE);
   int length = print_ifaces(message);
   
-  if (var_len = REST.get_query_variable(request, "eth-stats", &eth_stats)) {
-    if (strncmp(eth_stats, "eth-stats", var_len)) {
-      sprintf(message+length, " ETH-STATS:%u", 0);
-        //(unsigned int)enc424j600_get_overflow_counter());
-		length = strlen(message);
-	 }
-  }
-
   /* The query string can be retrieved by rest_get_query() or parsed for its key-value pairs. */
   if(REST.get_query_variable(request, "len", &len)) {
     length = atoi(len);
