@@ -11,6 +11,10 @@ NM      = arm-none-eabi-nm
 
 ##########  Source linker script
 # Use option to overwrite the default one if desired
+ifeq ($(IMAGES), 2)
+SOURCE_LDSCRIPT = $(CONTIKI_CPU)/sam/utils/linker_scripts/sam3x/sam3x8/gcc/flash.ld
+endif
+
 ifndef SOURCE_LDSCRIPT
 SOURCE_LDSCRIPT = $(CONTIKI_CPU)/sam/utils/linker_scripts/sam3x/sam3x8/gcc/flash1.ld
 endif
@@ -42,13 +46,13 @@ CFLAGS += -Wextra
 # Debug level
 CFLAGS += -g1
 # Other flags (Warnings)
-CFLAGS += -pipe -Wstrict-prototypes -Wmissing-prototypes -Werror-implicit-function-declaration 
+CFLAGS += -pipe -Wmissing-prototypes -Werror-implicit-function-declaration 
 CFLAGS += -Wpointer-arith -std=gnu99 -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain
 CFLAGS += -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas 
 CFLAGS += -Wfloat-equal -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return
 CFLAGS += -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls
 CFLAGS += -Wnested-externs -Wlong-long -Wunreachable-code --param max-inline-insns-single=500 
-#CFLAGS += -Wundef -Wcast-align
+#CFLAGS += -Wundef -Wcast-align -Wstrict-prototypes
 
 ######### Compilation flags in Contiki, not in ASF
 CFLAGS += -mlittle-endian

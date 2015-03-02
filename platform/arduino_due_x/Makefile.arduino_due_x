@@ -96,3 +96,14 @@ else
 %.ota_upgrade: %.bin
 	${error ADDRESS for target over-the-air upgrade not defined!}
 endif
+
+%.images:
+	@rm -f ${@:.images=.$(TARGET)} ${@:.images=.bin} $(TARGET)_1.bin
+	$(MAKE) ${@:.images=.$(TARGET)} IMAGES=1
+	@mv ${@:.images=.$(TARGET)} $(@:.images=1).$(TARGET)
+	@mv ${@:.images=.bin} $(@:.images=1).bin
+	@rm -f ${@:.images=.$(TARGET)} ${@:.images=.bin} $(TARGET)_2.bin
+	$(MAKE) ${@:.images=.$(TARGET)} IMAGES=2
+	@mv ${@:.images=.$(TARGET)} $(@:.images=2).$(TARGET)
+	@mv ${@:.images=.bin} $(@:.images=2).bin
+
