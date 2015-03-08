@@ -11,8 +11,18 @@ NM      = arm-none-eabi-nm
 
 ##########  Source linker script
 # Use option to overwrite the default one if desired
+ifeq ($(IMAGES),)
+IMAGES=1
+else
+ifeq ($(IMAGES), 1)
+SOURCE_LDSCRIPT = $(CONTIKI_CPU)/sam/utils/linker_scripts/sam3x/sam3x8/gcc/flash1.ld
+else
 ifeq ($(IMAGES), 2)
 SOURCE_LDSCRIPT = $(CONTIKI_CPU)/sam/utils/linker_scripts/sam3x/sam3x8/gcc/flash.ld
+else
+${error "IMAGES should be either 1 or 2"}
+endif
+endif
 endif
 
 ifndef SOURCE_LDSCRIPT
@@ -42,17 +52,21 @@ CFLAGS += -fpic
 # Allow called functions be located anyware in the 32-bit address space
 CFLAGS += -mlong-calls
 # Extra warnings activated
-CFLAGS += -Wextra
+#CFLAGS += -Wextra
 # Debug level
 CFLAGS += -g1
 # Other flags (Warnings)
-CFLAGS += -pipe -Wmissing-prototypes -Werror-implicit-function-declaration 
-CFLAGS += -Wpointer-arith -std=gnu99 -Wchar-subscripts -Wcomment -Wformat=2 -Wimplicit-int -Wmain
-CFLAGS += -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wunused -Wuninitialized -Wunknown-pragmas 
+CFLAGS += -pipe -Werror-implicit-function-declaration 
+CFLAGS += -Wpointer-arith -std=gnu99 -Wchar-subscripts -Wcomment -Wimplicit-int -Wmain
+CFLAGS += -Wparentheses -Wsequence-point -Wreturn-type -Wswitch -Wtrigraphs -Wuninitialized -Wunknown-pragmas
 CFLAGS += -Wfloat-equal -Wshadow -Wbad-function-cast -Wwrite-strings -Wsign-compare -Waggregate-return
-CFLAGS += -Wmissing-declarations -Wformat -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked -Wredundant-decls
+CFLAGS += -Wmissing-format-attribute -Wno-deprecated-declarations -Wpacked
 CFLAGS += -Wnested-externs -Wlong-long -Wunreachable-code --param max-inline-insns-single=500 
-#CFLAGS += -Wundef -Wcast-align -Wstrict-prototypes
+#CFLAGS += -Wcast-align
+ifeq ($(ALL_WARNINGS),1)
+CFLAGS += -Wundef -Wunused -Wmissing-declarations -Wredundant-decls -Wformat -Wmissing-field-initializers -Wformat=2
+CFLAGS += -Wstrict-prototypes -Wmissing-prototypes
+endif
 
 ######### Compilation flags in Contiki, not in ASF
 CFLAGS += -mlittle-endian
