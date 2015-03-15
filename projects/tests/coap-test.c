@@ -68,6 +68,10 @@ PROCESS_THREAD(coap_client_test_process, ev, data)
   while(!process_is_running(&(NET_PROC))) {
     PROCESS_PAUSE();
   }
+  do {
+    PROCESS_PAUSE();
+  } while(!process_is_running(&net_monitor_process));
+
   /* This way the packet can be treated as pointer as usual. */
   static coap_packet_t request[1];
   /* receives all CoAP messages */
