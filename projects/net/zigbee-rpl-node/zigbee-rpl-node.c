@@ -66,8 +66,6 @@ PROCESS_THREAD(xbee_ipv6_test_process, ev, data)
   /* Start network configuration monitor */
   process_start(&net_monitor_process, NULL);
 
-  /* Start the CoAP client test */
-  //process_start(&coap_client_test_process, NULL);
   /* Start process loop */
   while (1) {
     static resolv_status_t status;
