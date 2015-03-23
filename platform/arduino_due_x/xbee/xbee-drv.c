@@ -22,7 +22,7 @@
  */
 PROCESS(xbee_driver_process, "XBEE Driver");
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #include <stdio.h>
 #define PRINTF(...) printf(__VA_ARGS__)
@@ -539,9 +539,10 @@ xbee_transmit(unsigned short len)
   }
   drv->dev->stats->tx_pkt_count++;
   /* Send the packet in the FIFO buffer down to the XBEE device */
-  xbee_send_byte_stream_down(drv->dev, &tx_pkt_array[0], tx_pkt_array_len);
+  xbee_send_byte_stream_down(drv->dev, &tx_pkt_array[0], tx_pkt_array_len-1);
   /* A frame is now pending */
   drv->status = XBEE_DRV_DEV_TX_STATUS_PENDING;
+  xbee_send_byte_stream_down(drv->dev, &tx_pkt_array[tx_pkt_array_len-1], 1);
   return RADIO_TX_OK;
 }
 /*---------------------------------------------------------------------------*/
