@@ -189,3 +189,4 @@ void xbee_serial_line_init(unsigned long baudrate);
 void xbee_serial_line_reset(xbee_device_t *device);
 void xbee_do_hw_reset(xbee_device_t *device);
 #endif /* XBEE_H_ */
+
