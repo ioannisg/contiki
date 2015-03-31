@@ -69,7 +69,8 @@ typedef struct xbee_dev_stats {
 #endif
   uint16_t tx_pkt_count;
   uint16_t rx_pkt_count;
-  uint8_t rst_count;
+  uint16_t rst_count;
+  uint16_t queue_err;
 } xbee_dev_stats_t;
 
 /** XBEE configuration */
