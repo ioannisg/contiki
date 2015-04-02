@@ -9,7 +9,7 @@ CONTIKI_WITH_COFFEE=1
 CFLAGS += -DBOARD=ARDUINO_DUE_X -DNDEBUG -DARM_MATH_CM3=true -Dprintf=iprintf
 
 CONTIKI_TARGET_DIRS += . arduino config sensors
-CONTIKI_TARGET_SOURCEFILES += arduino_due.c wire_digital.c contiki-main.c tilt-sensor.c
+CONTIKI_TARGET_SOURCEFILES += arduino_due.c wire_digital.c contiki-main.c tilt-sensor.c leds-arch.c
 
 # Include source folders for network drivers based on the network setup, add relative
 # files in the build tree and define MACROS for Contiki

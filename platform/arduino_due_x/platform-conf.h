@@ -161,6 +161,11 @@ typedef uint64_t rtimer_clock_t;
 /* ----- Sensor Settings ------ */
 #define TILT_SENSOR_CONF_PIN_NUMBER			17
 
+/* ----- LED Settings ----------*/
+#define PLATFORM_HAS_LEDS                               1
+#undef LEDS_ALL
+#define LEDS_ALL                                        1 // Single LED
+
 /* ----- Macros for atomic operations -------*/
 #define INTERRUPTS_DISABLE()				cpu_irq_enter_critical()
 #define INTERRUPTS_ENABLE()				cpu_irq_leave_critical()
