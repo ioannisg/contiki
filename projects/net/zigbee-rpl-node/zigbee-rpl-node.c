@@ -78,7 +78,7 @@ PROCESS_THREAD(xbee_ipv6_test_process, ev, data)
       != RESOLV_STATUS_CACHED)) {
       resolv_query("contiki-xbee-router.local");
     } else {
-      resolv_conf(resv_addr);
+       uip_nameserver_update(resv_addr, UIP_NAMESERVER_INFINITE_LIFETIME);
     }
   }
   PRINTF("xbee-rpl-node: exit\n");
