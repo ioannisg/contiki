@@ -168,13 +168,14 @@ void sd_init(void);
 (flash_is_gpnvm_set(2) ? flash_write((COFFEE_START+FLASH_BANK0_START) + offset, from_buf, size, 1) :\
   flash_write((COFFEE_START+FLASH_BANK1_START) + offset, from_buf, size, 1)) 
 
-//#define COFFEE_WRITE(from_buf, size, offset) \
-uint32_t write_res; \ 
-//if (flash_is_gpnvm_set(2)) \
+#if 0
+#define COFFEE_WRITE(from_buf, size, offset) \
+uint32_t write_res; \
+if (flash_is_gpnvm_set(2)) \
   write_res = flash_write((COFFEE_START+FLASH_BANK0_START) + offset, from_buf, size, 1); \
 else \
   write_res = flash_write((COFFEE_START+FLASH_BANK1_START) + offset, from_buf, size, 1);
-
+#endif
 
 #define COFFEE_READ(to_buf, size, offset) \
 if (flash_is_gpnvm_set(2)) \
@@ -190,7 +191,7 @@ flash_erase(sector)
 inline void flash_read(uint32_t address, void *data, uint32_t length) {
 	uint8_t *pdata = (uint8_t *) address;
 	ENERGEST_ON(ENERGEST_TYPE_FLASH_READ);
-	memcpy((uint8_t*)data, address, length);
+	memcpy((uint8_t*)data, (uint8_t *)address, length);
 	ENERGEST_OFF(ENERGEST_TYPE_FLASH_READ);
 }
 
