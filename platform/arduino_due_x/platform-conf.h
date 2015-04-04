@@ -163,8 +163,8 @@ typedef uint64_t rtimer_clock_t;
 
 /* ----- LED Settings ----------*/
 #define PLATFORM_HAS_LEDS                               1
-#undef LEDS_ALL
-#define LEDS_ALL                                        1 // Single LED
+#undef LEDS_CONF_ALL
+#define LEDS_CONF_ALL                                   1 // Single LED
 
 /* ----- Macros for atomic operations -------*/
 #define INTERRUPTS_DISABLE()				cpu_irq_enter_critical()

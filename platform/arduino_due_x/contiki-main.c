@@ -58,6 +58,7 @@
 #include "dev/serial-line.h"
 #include "dev/uart1.h"
 #include "dev/watchdog.h"
+#include "dev/leds.h"
 
 #if WITH_USB_HOST_SUPPORT
 #include "dev/usbstack.h"
@@ -146,6 +147,9 @@ int main(void)
 	
 	/* Initialize the SAM board */
 	board_init();
+
+        /* Initialize user LED */
+        leds_init();
 
 	/* Serial line [UART] initialization */
 	uart1_init(CONF_UART_BAUDRATE);
