@@ -47,6 +47,11 @@
 #include "net/ipv6/uip-ds6.h"
 #endif
 
+#if NETSTACK_CONF_WITH_IP64
+#include "ip64.h"
+#include "ip64-addr.h"
+#endif
+
 #include <string.h>
 
 #define DEBUG DEBUG_NONE
@@ -70,6 +75,14 @@ extern struct uip_fallback_interface UIP_FALLBACK_INTERFACE;
 
 #if UIP_CONF_IPV6_RPL
 #include "rpl/rpl.h"
+#endif
+
+#if UIP_MULTI_IFACES
+process_event_t uip_ds6_iface_event;
+#endif
+
+#ifdef NET_PROC_H
+#include NET_PROC_H
 #endif
 
 process_event_t tcpip_event;
@@ -115,12 +128,23 @@ uint8_t
 tcpip_output(const uip_lladdr_t *a)
 {
   int ret;
+#if ! UIP_MULTI_IFACES
   if(outputfunc != NULL) {
     ret = outputfunc(a);
     return ret;
   }
   UIP_LOG("tcpip_output: Use tcpip_set_outputfunc() to set an output function");
   return 0;
+#else /* UIP_MULTI_IFACES */
+  if(uip_out_if != NULL && uip_out_if->output_func != NULL) {
+	  ret = uip_out_if->output_func(a);
+	  uip_out_if = NULL;
+	  return ret;
+  }
+  UIP_LOG("tcpip_output: Use tcpip_set_outputfunc() to set an output function");
+  uip_out_if = NULL;
+  return 0;
+#endif /* UIP_MULTI_IFACES */
 }
 
 void
@@ -223,6 +247,12 @@ packet_input(void)
     }
   }
 #endif /* UIP_CONF_IP_FORWARD */
+#if UIP_MULTI_IFACES
+#if UIP_ICMP_SEND_UNREACH_ROUTE
+  /* We might have not cleared the IN pointer, for an ICMPv6 error message. */
+  uip_in_if = NULL;
+#endif
+#endif
 }
 /*---------------------------------------------------------------------------*/
 #if UIP_TCP
@@ -376,6 +406,12 @@ eventhandler(process_event_t ev, process_data_t data)
 #endif /*UIP_TCP*/
   struct process *p;
 
+#if UIP_MULTI_IFACES
+  if (ev == uip_ds6_iface_event) {
+    uip_ds6_start_iface((uip_ds6_iface_t *)data);
+  }
+#endif
+
   switch(ev) {
     case PROCESS_EVENT_EXITED:
       /* This is the event we get if a process has exited. We go through
@@ -472,18 +508,49 @@ eventhandler(process_event_t ev, process_data_t data)
           tcpip_ipv6_output();
         }*/
 #if !UIP_CONF_ROUTER
+#if ! UIP_MULTI_IFACES
         if(data == &uip_ds6_timer_rs &&
            etimer_expired(&uip_ds6_timer_rs)) {
           uip_ds6_send_rs();
           tcpip_ipv6_output();
         }
+#else /* UIP_MULTI_IFACES */
+        for (int k=0; k<UIP_DS6_IFACES_NUM; k++) {
+          uip_ds6_iface_t *iface = &uip_ds6_ifaces[k];
+          if (iface->status > UIP_DS6_IFACE_STATUS_NOT_STARTED &&
+            data == &iface->timer_rs &&
+            etimer_expired(&iface->timer_rs)) {
+            uip_ds6_send_rs(iface);
+				tcpip_ipv6_output();
+          }
+        }
+#endif /* UIP_MULTI_IFACES */
 #endif /* !UIP_CONF_ROUTER */
+#if ! UIP_MULTI_IFACES
         if(data == &uip_ds6_timer_periodic &&
            etimer_expired(&uip_ds6_timer_periodic)) {
           uip_ds6_periodic();
           tcpip_ipv6_output();
         }
-#endif /* NETSTACK_CONF_WITH_IPV6 */
+#else /* UIP_MULTI_IFACES */
+        for (int kk=0; kk<UIP_DS6_IFACES_NUM; kk++) {
+          uip_ds6_iface_t *iface = &uip_ds6_ifaces[kk];
+          if (iface->status > UIP_DS6_IFACE_STATUS_NOT_STARTED &&
+            data == &iface->timer_periodic &&
+				etimer_expired(&iface->timer_periodic)) {
+
+            if (uip_out_if != NULL && uip_len != 0) {
+              PRINTF("tcpip: before-periodic:pending-tcpip-output\n");
+				}
+            uip_ds6_periodic(iface);
+				if (uip_out_if != NULL && uip_len != 0) {
+					PRINTF("tcpip: after-periodic:pending-tcpip-output\n");
+				}
+				tcpip_ipv6_output();
+          }
+        }
+#endif /* UIP_MULTI_IFACES */
+#endif /* NETSTACK_CONF_IPV6 */
       }
       break;
 	 
@@ -529,7 +596,17 @@ void
 tcpip_input(void)
 {
   process_post_synch(&tcpip_process, PACKET_INPUT, NULL);
+#if UIP_MULTI_IFACES
+  if (uip_out_if) {
+    PRINTF("tcpip_input: input-process-done-leaving-uip-out-if-non-empty\n");
+  } else {
+    uip_len = 0;
+	uip_ext_len = 0;
+  }
+  return;
+#else
   uip_len = 0;
+#endif /* UIP_MLTI_IFACES */
 #if NETSTACK_CONF_WITH_IPV6
   uip_ext_len = 0;
 #endif /*NETSTACK_CONF_WITH_IPV6*/
@@ -543,20 +620,57 @@ tcpip_ipv6_output(void)
   uip_ipaddr_t *nexthop;
 
   if(uip_len == 0) {
+#if UIP_MULTI_IFACES
+  if (uip_out_if != NULL) {
+    PRINTF("tcpip: out-if-non-null:%u, on-zero-len\n",uip_out_if->ll_type);
+    uip_out_if = NULL;
+    uip_in_if = NULL;
+  }
+#endif /* UIP_MULTI_IFACES */
     return;
   }
 
   if(uip_len > UIP_LINK_MTU) {
     UIP_LOG("tcpip_ipv6_output: Packet to big");
     uip_len = 0;
+#if UIP_MULTI_IFACES
+    uip_out_if = NULL;
+    uip_in_if = NULL;
+#endif /* UIP_MULTI_IFACES */
     return;
   }
 
   if(uip_is_addr_unspecified(&UIP_IP_BUF->destipaddr)){
     UIP_LOG("tcpip_ipv6_output: Destination address unspecified");
     uip_len = 0;
+#if UIP_MULTI_IFACES
+    uip_out_if = NULL;
+    uip_in_if = NULL;
+#endif /* UIP_MULTI_IFACES */
     return;
   }
+#if NETSTACK_CONF_WITH_IP64 && UIP_MULTI_IFACES
+  uip_ip4addr_t ip4addr;
+  if (ip64_addr_6to4(&UIP_IP_BUF->destipaddr, &ip4addr)) {
+    int k;
+    for (k=0; k<UIP_DS6_PREFIX_NB; k++) {
+      uip_ds6_prefix_t *prefix = &uip_ds6_prefix_list[k];
+      if (prefix->isused &&
+        uip_ipaddr_prefixcmp(&prefix->ipaddr, &UIP_IP_BUF->destipaddr,
+          prefix->length)) {
+#if UIP_CONF_IPV6_RPL
+        rpl_remove_header();
+#endif
+        PRINTF("tcpip: packet sent to ip64\n");
+        IP64_CONF_UIP_FALLBACK_INTERFACE.output();
+        uip_len = 0;
+        uip_in_if = 0;
+        uip_out_if = 0;
+        return;
+      }
+    }
+  }
+#endif /* NETSTACK_CONF_WITH_IP64 && UIP_MULTI_IFACES */
 
   if(!uip_is_addr_mcast(&UIP_IP_BUF->destipaddr)) {
     /* Next hop determination */
@@ -574,6 +688,54 @@ tcpip_ipv6_output(void)
 
       /* No route was found - we send to the default route instead. */
       if(route == NULL) {
+#if UIP_MULTI_IFACES
+        /* Don't send to default route if host has my prefix or any RPL prefix */
+        int k;
+        for (k=0; k<UIP_DS6_PREFIX_NB; k++) {
+          uip_ds6_prefix_t *prefix = &uip_ds6_prefix_list[k];
+          if (prefix->isused &&
+            uip_ipaddr_prefixcmp(&UIP_IP_BUF->destipaddr, &prefix->ipaddr, 
+              prefix->length)) {
+            PRINTF("tcpip: no-def-route-for-reg-prefix: ");
+            PRINT6ADDR(&prefix->ipaddr);
+            PRINTF("/%u, while-addressing: ", prefix->length);
+            PRINT6ADDR(&UIP_IP_BUF->destipaddr);
+            PRINTF("\n");
+#if UIP_ICMP_SEND_UNREACH_ROUTE
+            /* Send ICMP6 error message to source host */
+            uip_out_if = uip_in_if;
+            uip_icmp6_error_output(ICMP6_DST_UNREACH,
+              ICMP6_DST_UNREACH_NOROUTE, 0);
+            /* We have the outgoing interface, the destination address, but not the 
+             * next-hop, which we need to resolve again. 
+             */
+            if (uip_ds6_is_addr_onlink(&UIP_IP_BUF->destipaddr)) {
+              nexthop = &UIP_IP_BUF->destipaddr;
+              goto nexthop_found;
+            }
+            PRINTF("tcpip: error-dest-off-link, check if has route.\n");
+            route = uip_ds6_route_lookup(&UIP_IP_BUF->destipaddr);
+            nexthop = uip_ds6_route_nexthop(route);
+            if (nexthop != NULL) {
+              goto nexthop_found;
+            }
+            /* Send to default route ONLY IF the default route
+             * is on the interface where the packet came from.
+             */
+            nexthop = uip_ds6_defrt_choose();
+            if (nexthop != NULL &&
+              uip_ds6_lookup_iface_from_src_addr(nexthop) == uip_in_if) {
+              goto nexthop_found;
+	  	      }          
+            PRINTF("tcpip: no route for error message, drop.\n");
+#endif /* UIP_ICMP_SEND_UNREACH_ROUTE */
+            uip_len = 0;
+            uip_out_if = 0;
+            uip_in_if = 0;
+            return;
+          }
+        }
+#endif /* UIP_MULTI_IFACES */
         PRINTF("tcpip_ipv6_output: no route found, using default route\n");
         nexthop = uip_ds6_defrt_choose();
         if(nexthop == NULL) {
@@ -592,6 +754,10 @@ tcpip_ipv6_output(void)
           PRINTF("tcpip_ipv6_output: Destination off-link but no route\n");
 #endif /* !UIP_FALLBACK_INTERFACE */
           uip_len = 0;
+#if UIP_MULTI_IFACES
+          uip_out_if = NULL;
+          uip_in_if = NULL;
+#endif
           return;
         }
 
@@ -641,16 +807,80 @@ tcpip_ipv6_output(void)
 
     /* End of next hop determination */
 
+nexthop_found:
+#if ! UIP_MULTI_IFACES
 #if UIP_CONF_IPV6_RPL
     if(rpl_update_header_final(nexthop)) {
       uip_len = 0;
       return;
     }
 #endif /* UIP_CONF_IPV6_RPL */
+#endif /* UIP_MULTI_IFACES */
     nbr = uip_ds6_nbr_lookup(nexthop);
     if(nbr == NULL) {
+#if UIP_MULTI_IFACES
+      /* Neighbor does not exist. So we need to determine the outgoing
+       * interface where we can send a neighbor solicitation message.
+       *
+       * In case of multiple interfaces, we need to determine the
+       * outgoing interface based on the next hop. It is possible
+       * that nexthop is local, so in that case we should be able
+       * to have stored this vital information at an earlier time
+       */
+      if (uip_out_if != NULL) {
+        PRINTF("tcpip: uip_out_if known: (%u)\n", uip_out_if->ll_type);
+        goto check_neighbor;
+      }
+      /* Try first with prefix match if the next hop address is global */
+      uip_out_if = uip_ds6_prefix_lookup_iface(nexthop);
+      if (uip_out_if != NULL) {
+        PRINTF("tcpip: uip_out_if determined using global nexthop: (%u)\n",
+          uip_out_if->ll_type);
+        goto check_neighbor;
+      }
+      /* Try with the source ip address at a last resort. If this packet
+       * has been prepared previously and the source address is selected
+       * properly, the interface can now be determined again.
+       */
+      uip_out_if = uip_ds6_lookup_iface_from_src_addr(&UIP_IP_BUF->srcipaddr);
+      if (uip_out_if != NULL) {
+        PRINTF("tcpip: uip_out_if determined using source address: (%u)\n",
+           uip_out_if->ll_type);
+         goto check_neighbor;
+      }
+      PRINTF("tcpip: could not determine outgoing interface. Drop packet.\n");
+      uip_len = 0;
+#if UIP_MULTI_IFACES
+      uip_out_if = NULL;
+      uip_in_if = NULL;
+#endif
+      return;
+  
+      /* End of outgoing interface determination */
+
+check_neighbor:
+      /* Outgoing interface determined. Update RPL header if required */
+#if UIP_CONF_IPV6_RPL
+      rpl_remove_header();
+      if (uip_out_if->ll_type != NETSTACK_8023) {
+        if(rpl_update_header_final(nexthop, uip_out_if)) {
+          uip_len = 0;
+          uip_out_if = NULL;
+          return;
+        }
+      }
+#endif /* UIP_CONF_IPV6_RPL */
+#endif /* UIP_MULTI_IFACES */
 #if UIP_ND6_SEND_NA
+#if ! UIP_MULTI_IFACES
       if((nbr = uip_ds6_nbr_add(nexthop, NULL, 0, NBR_INCOMPLETE)) == NULL) {
+#else /* UIP_MULTI_IFACES */
+      if((nbr = uip_ds6_nbr_add(nexthop, NULL, 0, NBR_INCOMPLETE, uip_out_if))
+		  == NULL) {
+        PRINTF("tcpip: could not add a neighbor\n");
+        uip_out_if = NULL;
+        uip_in_if = NULL;
+#endif /* UIP_MULTI_IFACES */
         uip_len = 0;
         return;
       } else {
@@ -667,13 +897,39 @@ tcpip_ipv6_output(void)
        * address SHOULD be placed in the IP Source Address of the outgoing
        * solicitation.  Otherwise, any one of the addresses assigned to the
        * interface should be used."*/
+#if ! UIP_MULTI_IFACES
        if(uip_ds6_is_my_addr(&UIP_IP_BUF->srcipaddr)){
           uip_nd6_ns_output(&UIP_IP_BUF->srcipaddr, NULL, &nbr->ipaddr);
         } else {
           uip_nd6_ns_output(NULL, NULL, &nbr->ipaddr);
         }
 
+#else /* UIP_MULTI_IFACES */
+       /* Nullify outgoing interface. NS generation should re-set it. */
+       uip_out_if = NULL;
+       if(uip_ds6_is_my_addr_on_iface(&UIP_IP_BUF->srcipaddr, nbr->iface)){
+         uip_nd6_ns_output(nbr->iface, &UIP_IP_BUF->srcipaddr, NULL, &nbr->ipaddr);
+		 } else {
+         uip_nd6_ns_output(nbr->iface, NULL, NULL, &nbr->ipaddr);
+		 }
+       if (uip_len == 0) {
+         PRINTF("tcpip: ns-created-but-uip-len-is-0\n");
+         uip_out_if = NULL;
+         uip_in_if = NULL;
+         return;
+       }
+		 if (uip_out_if == NULL) {
+         PRINTF("tcpip: ns-created-but-out-if-is-null\n");
+			uip_len = 0;
+         uip_in_if = NULL;
+			return;
+		 }
+#endif /* UIP_MULTI_IFACES */
+#if ! UIP_MULTI_IFACES
         stimer_set(&nbr->sendns, uip_ds6_if.retrans_timer / 1000);
+#else /* UIP_MULTI_IFACES */
+        stimer_set(&nbr->sendns, uip_out_if->netif.retrans_timer / 1000);
+#endif /* UIP_MULTI_IFACES */
         nbr->nscount = 1;
       }
 #endif /* UIP_ND6_SEND_NA */
@@ -690,6 +946,10 @@ tcpip_ipv6_output(void)
         }
 #endif /*UIP_CONF_IPV6_QUEUE_PKT*/
         uip_len = 0;
+#if UIP_MULTI_IFACES
+        uip_out_if = NULL;
+        uip_in_if = NULL;
+#endif
         return;
       }
       /* Send in parallel if we are running NUD (nbc state is either STALE,
@@ -702,6 +962,25 @@ tcpip_ipv6_output(void)
       }
 #endif /* UIP_ND6_SEND_NA */
 
+#if UIP_MULTI_IFACES
+	   uip_out_if = nbr->iface;		
+      /* If the packet is heading to a 802.3 interface, we must ensure that 
+       * a possible RPL header option is removed from the IPv6 header.
+       */
+#if UIP_CONF_IPV6_RPL
+      rpl_remove_header();
+      if (uip_out_if->ll_type != NETSTACK_8023) {
+        /* Add RPL header */
+        if(rpl_update_header_final(nexthop, uip_out_if)) {
+          PRINTF("tcpip_ipv6_output: rpl update header final fail\n");
+          uip_out_if = NULL;
+          uip_len = 0;
+          return;
+        }
+      }
+#endif /* UIP_CONF_IPV6_RPL */
+
+#endif /* UIP_MULTI_IFACES */
       tcpip_output(uip_ds6_nbr_get_ll(nbr));
 
 #if UIP_CONF_IPV6_QUEUE_PKT
@@ -715,6 +994,20 @@ tcpip_ipv6_output(void)
         uip_len = uip_packetqueue_buflen(&nbr->packethandle);
         memcpy(UIP_IP_BUF, uip_packetqueue_buf(&nbr->packethandle), uip_len);
         uip_packetqueue_free(&nbr->packethandle);
+#if UIP_MULTI_IFACES
+        uip_out_if = nbr->iface;		  
+        /* If the packet is heading to a 802.3 interface, we must ensure that 
+         * a possible RPL header option is removed from the IPv6 header.
+         */
+#if UIP_CONF_IPV6_RPL
+        if (uip_out_if->ll_type == NETSTACK_8023) {
+          /* Check if RPL header is present */
+          PRINTF("tcpip: removing-rpl-hdr-for-8023\n");
+          rpl_remove_header();
+        }
+#endif /* UIP_CONF_IPV6_RPL */
+
+#endif /* UIP_MULTI_IFACES */
         tcpip_output(uip_ds6_nbr_get_ll(nbr));
       }
 #endif /*UIP_CONF_IPV6_QUEUE_PKT*/
@@ -722,6 +1015,15 @@ tcpip_ipv6_output(void)
       uip_len = 0;
       return;
     }
+#if UIP_MULTI_IFACES
+	 if (uip_len != 0 && uip_out_if != NULL) {
+	   PRINTF("tcpip_ipv6_output returns but pkt is pending\n");
+      /* HACK here. This is a pending NS, and we send it right away*/
+      tcpip_output(NULL);
+      uip_len = 0;
+      uip_ext_len = 0;
+	 }
+#endif /* UIP_MULTI_IFACES */
     return;
   }
   /* Multicast IP destination address. */
@@ -807,6 +1109,10 @@ PROCESS_THREAD(tcpip_process, ev, data)
  }
 #endif
 
+#if UIP_MULTI_IFACES
+  uip_ds6_iface_event = process_alloc_event();
+#endif
+
   tcpip_event = process_alloc_event();
 #if UIP_CONF_ICMP6
   tcpip_icmp6_event = process_alloc_event();
@@ -822,6 +1128,11 @@ PROCESS_THREAD(tcpip_process, ev, data)
   rpl_init();
 #endif /* UIP_CONF_IPV6_RPL */
 
+#if ! UIP_MULTI_IFACES
+#ifdef NET_PROC
+  process_start(&(NET_PROC), NULL);
+#endif
+#endif
   while(1) {
     PROCESS_YIELD();
     eventhandler(ev, data);

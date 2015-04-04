@@ -320,6 +320,15 @@ void tcpip_icmp6_call(uint8_t type);
  */
 CCIF extern process_event_t tcpip_event;
 
+#if UIP_MULTI_IFACES
+/**
+ * The uIP interface event.
+ *
+ * This event is posted to the tcpip process whenever a uIP interface event has occurred.
+ */
+CCIF extern process_event_t uip_ds6_iface_event;
+#endif
+
 /**
  * \name TCP/IP packet processing
  * @{
