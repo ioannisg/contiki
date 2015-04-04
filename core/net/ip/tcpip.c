@@ -1015,14 +1015,21 @@ check_neighbor:
       uip_len = 0;
       return;
     }
-#if UIP_MULTI_IFACES
-	 if (uip_len != 0 && uip_out_if != NULL) {
-	   PRINTF("tcpip_ipv6_output returns but pkt is pending\n");
+#if ! UIP_MULTI_IFACES
+    if (uip_len != 0) {
+      /* HACK! This is a pending NS and will be sent immediately */
+      tcpip_output(NULL);
+      uip_len = 0;
+      uip_ext_len = 0;
+    }
+#else
+    if (uip_len != 0 && uip_out_if != NULL) {
+      PRINTF("tcpip_ipv6_output returns but pkt is pending\n");
       /* HACK here. This is a pending NS, and we send it right away*/
       tcpip_output(NULL);
       uip_len = 0;
       uip_ext_len = 0;
-	 }
+    }
 #endif /* UIP_MULTI_IFACES */
     return;
   }
