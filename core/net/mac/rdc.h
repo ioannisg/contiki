@@ -87,6 +87,9 @@ struct rdc_driver {
 
   /** Returns the channel check interval, expressed in clock_time_t ticks. */
   unsigned short (* channel_check_interval)(void);
+
+  /** Callback for getting notified of link connection events */
+  void (* connect_event)(uint8_t up);
 };
 
 #endif /* RDC_H_ */
