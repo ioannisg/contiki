@@ -20,7 +20,7 @@ void
 leds_arch_init(void)
 {
   /* LED is already initialized in init, but we could move it here. */
-  configure_output_pin(13, LOW, DISABLE, DISABLE);
+  configure_output_pin(ARDUINO_ORANGE_LED_PIN, LOW, DISABLE, DISABLE);
 }
 /*---------------------------------------------------------------------------*/
 unsigned char
