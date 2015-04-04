@@ -16,5 +16,9 @@ REST=coap_rest_implementation
 # Add CoAP engine
 APPS += er-coap rest-engine
 
+# Enable serial emergency debug
+CONTIKI_WITH_SERIAL_DEBUG=1
+
 CONTIKI = ../..
 include $(CONTIKI)/Makefile.include
+include $(CONTIKI)/projects/debug/Makefile.debug
