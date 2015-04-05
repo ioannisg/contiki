@@ -10,8 +10,6 @@
 #include <stdio.h>
 #include "rest-engine.h"
 #include "net-monitor.h"
-#include "xbee/xbee-public.h"
-#include "sicslowpan.h"
 
 #define DEBUG 0
 #if DEBUG
