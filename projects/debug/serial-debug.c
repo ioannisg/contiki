@@ -176,6 +176,7 @@ serial_debug_rpl_handler(uint32_t first, uint32_t second)
 void
 serial_debug_init(void)
 {
+  memset(&serial_debug, 0, sizeof(serial_debug_t);
   /* Configure base pin for low output */
   configure_output_pin(SERIAL_DEBUG_BASE_PIN, LOW, DISABLE, DISABLE);
   /* Configure all debug pins as input */
@@ -185,11 +186,11 @@ serial_debug_init(void)
     PIO_IT_RISE_EDGE, serial_debug_wifi_handler);
   configure_input_pin_interrupt_enable(XBEE_DEBUG_PIN, PIO_PULLUP, 
     PIO_IT_RISE_EDGE, serial_debug_xbee_handler);
-  configure_input_pin_interrupt_enable(8023_DEBUG_PIN, PIO_PULLUP, 
+  configure_input_pin_interrupt_enable(IEEE8023_DEBUG_PIN, PIO_PULLUP, 
     PIO_IT_RISE_EDGE, serial_debug_8023_handler);
-  configure_input_pin_interrupt_enable(80211_DEBUG_PIN, PIO_PULLUP, 
+  configure_input_pin_interrupt_enable(IEEE80211_DEBUG_PIN, PIO_PULLUP, 
     PIO_IT_RISE_EDGE, serial_debug_80211_handler);
-  configure_input_pin_interrupt_enable(6LOWPAN_DEBUG_PIN, PIO_PULLUP, 
+  configure_input_pin_interrupt_enable(SICSLOWPAN_DEBUG_PIN, PIO_PULLUP, 
     PIO_IT_RISE_EDGE, serial_debug_6lowpan_handler);
   configure_input_pin_interrupt_enable(UIP_DEBUG_PIN, PIO_PULLUP, 
     PIO_IT_RISE_EDGE, serial_debug_uip6_handler);
