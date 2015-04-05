@@ -323,5 +323,6 @@ int sicslowpan_get_last_rssi(void);
 
 extern const struct network_driver sicslowpan_driver;
 
+extern uint32_t sicslowpan_dropped_pkt_stats;
 #endif /* SICSLOWPAN_H_ */
 /** @} */
