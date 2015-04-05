@@ -5,6 +5,7 @@
  *  Author: Ioannis Glaropoulos
  */
 #include "contiki.h"
+#include "dev/leds.h"
 #include "lib/ringbuf.h"
 #include "xbee.h"
 #include "xbee-api.h"
@@ -14,7 +15,7 @@
 #include "watchdog.h"
 #include "delay.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #if DEBUG
 #define PRINTF(...) printf(__VA_ARGS__)
 #else
@@ -202,6 +203,7 @@ xbee_poll_process(void)
   if (xbee_num_of_pend_polls < 1) {
     if (process_post(&xbee_serial_line_process,
       xbee_serial_line_event_message, NULL) == PROCESS_ERR_FULL) {
+        xbee_dev.stats->queue_err++;
         PRINTF("xbee: event-queue-full\n");
       return 0;
     } else {
@@ -450,6 +452,7 @@ xbee_process_byte(xbee_device_t *dev, unsigned char c)
       /* Start over the reading, but from second byte. */
       dev->ptr = 1;
       dev->stats->pkt_err++;
+      return;
       /* Post an error message to the driver process. */
       //process_post(&xbee_serial_line_process, 
         //xbee_serial_line_error_event_message, NULL);
@@ -566,6 +569,8 @@ PROCESS_THREAD(xbee_serial_line_process, ev, data)
   if (process_is_running(&xbee_driver_process)) {
     process_post(&xbee_driver_process, PROCESS_EVENT_EXIT, NULL);  
   }
+  /* Indicate an error */
+  leds_on(LEDS_ALL);
   PRINTF("xbee: exit\n");
   PROCESS_END();
 }

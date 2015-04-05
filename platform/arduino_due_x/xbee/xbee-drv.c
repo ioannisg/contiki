@@ -123,31 +123,56 @@ void
 xbee_drv_get_log(char *err_log)
 {
   sprintf(err_log,
-    "DEV:%u,RST:%u,OVF:%u,CMD:%u,SFD:%u,MSB:%u,LSB:%u,PKT:%u,TX:%u,RX:%u\n",
+    "DEV:%u,RST:%u,OVF:%u,OVF-ON:%u,CMD:%u,SFD:%u,MSB:%u,LSB:%u,PKT:%u,QUE:%u\n",
     xbee_drv_dev.dev->sdev,
     xbee_drv_dev.dev->stats->rst_count,
-	 xbee_drv_dev.dev->stats->ovf_err,
-	 xbee_drv_dev.dev->stats->cmd_err,
+    xbee_drv_dev.dev->stats->ovf_err,
+#if XBEE_HANDLE_SYNC_OPERATIONS
+    xbee_drv_dev.dev->stats->ovf_on_err,
+#else
+    0,
+#endif /* XBEE_HANDLE_SYNC_OPERATIONS */
+    xbee_drv_dev.dev->stats->cmd_err,
     xbee_drv_dev.dev->stats->sfd_err,
     xbee_drv_dev.dev->stats->msb_err,
     xbee_drv_dev.dev->stats->lsb_err,
     xbee_drv_dev.dev->stats->pkt_err,
-    xbee_drv_dev.dev->stats->tx_pkt_count,
-    xbee_drv_dev.dev->stats->rx_pkt_count);
+    xbee_drv_dev.dev->stats->queue_err);
 #if XBEE_WITH_DUAL_RADIO
   sprintf(err_log+strlen(err_log),
-    "DEV:%u,RST:%u,OVF:%u,CMD:%u,SFD:%u,MSB:%u,LSB:%u,PKT:%u,TX:%u,RX:%u",
+    "DEV:%u,RST:%u,OVF:%u,OVF-ON:%u,CMD:%u,SFD:%u,MSB:%u,LSB:%u,PKT:%u,QUE:%u",
     xbee_drv_dev0.dev->sdev,
     xbee_drv_dev0.dev->stats->rst_count,
     xbee_drv_dev0.dev->stats->ovf_err,
+#if XBEE_HANDLE_SYNC_OPERATIONS
+    xbee_drv_dev0.dev->stats->on_ovf_err,
+#else
+    0,
+#endif /* XBEE_HANDLE_SYNC_OPERATIONS */
     xbee_drv_dev0.dev->stats->cmd_err,
     xbee_drv_dev0.dev->stats->sfd_err,
     xbee_drv_dev0.dev->stats->msb_err,
     xbee_drv_dev0.dev->stats->lsb_err,
     xbee_drv_dev0.dev->stats->pkt_err,
+    xbee_drv_dev0.dev->stats->queue_err);
+#endif /* XBEE_WITH_DUAL_RADIO */
+}
+/*---------------------------------------------------------------------------*/
+void
+xbee_drv_get_traffic_log(char *pkt_log)
+{
+  sprintf(pkt_log,
+    "DEV:%u, STATUS:%u, TX:%u, RX:%u", xbee_drv_dev.dev->sdev,
+    xbee_drv_dev.status,
+    xbee_drv_dev.dev->stats->tx_pkt_count,
+    xbee_drv_dev.dev->stats->rx_pkt_count);
+#if XBEE_WITH_DUAL_RADIO
+  sprintf(pkt_log,
+    "DEV:%u, STATUS:%u, TX:%u, RX:%u", xbee_drv_dev0.dev->sdev,
+    xbee_drv_dev0.status,
     xbee_drv_dev0.dev->stats->tx_pkt_count,
     xbee_drv_dev0.dev->stats->rx_pkt_count);
-#endif /* XBEE_WITH_DUAL_RADIO */
+#endif /* XBEE_WITH_DUAL_RADIO*/
 }
 /*---------------------------------------------------------------------------*/
 static xbee_cmd_status_t
