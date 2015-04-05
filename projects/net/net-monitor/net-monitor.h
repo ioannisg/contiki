@@ -24,8 +24,8 @@ extern resource_t res_route_print_event,
   res_ifaces, 
   res_neighbors,
 #if WITH_ZIGBEE_SUPPORT
-  res_driver_stats_periodic,
-  res_other_stats,
+  res_radio_stats_periodic,
+  res_radio_stats,
 #endif
   res_command_directive;
   
