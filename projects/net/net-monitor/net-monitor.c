@@ -108,9 +108,9 @@ PROCESS_THREAD(net_monitor_process, ev, data)
   rest_activate_resource(&res_neighbors, (char *)"ipv6-neighbors");
   rest_activate_resource(&res_routes_periodic, (char *)"ipv6-routes/periodic");
 #if WITH_ZIGBEE_SUPPORT
-  rest_activate_resource(&res_driver_stats_periodic,
-    (char *)"stats/driver-stats-periodic");
-  rest_activate_resource(&res_other_stats, (char *)"stats/other-stats");
+  rest_activate_resource(&res_radio_stats_periodic,
+    (char *)"stats/radio-stats-periodic");
+  rest_activate_resource(&res_radio_stats, (char *)"stats/radio-stats");
 #endif
   rest_activate_resource(&res_command_directive, (char *)"command-directive");
   //rest_activate_resource(&res_route_print_event, "ipv6-routes-print");
