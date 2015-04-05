@@ -80,7 +80,7 @@ typedef struct xbee_dev_config {
   uint16_t panid;
   uint8_t mac_mode;
   uint8_t power;
-  uint16_t my_addr;  
+  uint16_t my_addr;
   uint8_t api;
 } xbee_dev_config_t;
 
@@ -118,7 +118,7 @@ typedef enum xbee_status{
   XBEE_TX_PKT_TX_ERR_LEN,
   XBEE_TX_PKT_TX_ERR_NO_ACK,
   XBEE_TX_PKT_TX_ERR_CCA_FAIL,
-  XBEE_TX_PKT_TX_ERR_OTHER,  
+  XBEE_TX_PKT_TX_ERR_OTHER,
 } xbee_status_t;
 
 /**
@@ -129,7 +129,7 @@ typedef enum xbee_cmd_rsp_status {
   XBEE_CMD_RSP_STATUS_ERR = 1,
   XBEE_CMD_RSP_STATUS_INV_CMD = 2,
   XBEE_CMD_RSP_STATUS_INV_PARAM= 3,
-  XBEE_CMD_STATUS_RSP_INVALID_RSP = 0xff,  
+  XBEE_CMD_STATUS_RSP_INVALID_RSP = 0xff,
 } xbee_cmd_rsp_status_t;
 
 /**

@@ -11,7 +11,7 @@
 
 /* Public API */
 void xbee_drv_get_log(char *err_log);
-
+void xbee_drv_get_traffic_log(char *traffic_log);
 
 
 #endif /* XBEE-PUBLIC_H_ */
