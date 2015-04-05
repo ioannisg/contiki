@@ -274,6 +274,17 @@ struct radio_driver {
   radio_result_t (* set_object)(radio_param_t param, const void *src,
                                 size_t size);
 
+  /**
+   * Print error statistics of the radio driver
+   * Return the number of bytes printed. [Note the 256 limit]
+   */
+  int (* print_err_stats)(char *buffer, unsigned int length, unsigned int type);
+
+  /**
+   * Print traffic statistics of the radio driver
+   * Return the number of bytes printed. [Note the 256 limit]
+   */
+  int (* print_traffic_stats)(char *buffer, unsigned int length, unsigned int type);
 };
 
 #endif /* RADIO_H_ */

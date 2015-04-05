@@ -1,5 +1,4 @@
 #include "xbee-api.h"
-#include "xbee-public.h"
 #include "process.h"
 #include "netstack_x.h"
 #include "contiki-conf.h"
