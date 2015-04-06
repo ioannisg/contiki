@@ -20,5 +20,5 @@ APPS += er-coap rest-engine
 CONTIKI_WITH_SERIAL_DEBUG=1
 
 CONTIKI = ../..
-include $(CONTIKI)/Makefile.include
 include $(CONTIKI)/projects/debug/Makefile.debug
+include $(CONTIKI)/Makefile.include
