@@ -1,10 +1,8 @@
-#Include DEBUG file structure on the build tree
-CONTIKI_SOURCEFILES += serial-debug.c
-CONTIKIDIRS += $(CONTIKI)/projects/debug
-
 ifeq ($(CONTIKI_WITH_SERIAL_DEBUG), 1)
+  #Include DEBUG file structure on the build tree
+  CONTIKI_SOURCEFILES += serial-debug.c
+  CONTIKIDIRS += $(CONTIKI)/projects/debug
   CFLAGS += -DWITH_SERIAL_DEBUG=1
 else
   CFLAGS += -DWITH_SERIAL_DEBUG=0
 endif
-

@@ -92,8 +92,9 @@
 #define PRINTLLADDR(addr)
 #endif
 
-
-
+#if WITH_SERIAL_DEBUG == 1
+#include "serial-debug.h"
+#endif
 
 
 
@@ -168,6 +169,11 @@ int main(void)
 	PRINTF("Starting ");
 	PRINTF(CONTIKI_VERSION_STRING);
 		
+        /* Initialize serial (pin-enabled) debug */
+        #if WITH_SERIAL_DEBUG == 1
+        serial_debug_init();
+        #endif
+
 	/* Configure sys-tick for 1 ms */
 	clock_init();
 		
