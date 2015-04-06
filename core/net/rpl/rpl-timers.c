@@ -50,6 +50,20 @@
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
+#if DEBUG == DEBUG_NONE
+#if WITH_SERIAL_DEBUG == 1
+#include "serial-debug.h"
+#undef PRINTF
+#define PRINTF(...) if((serial_debug.ip_debug & UIP6_RPL_DEBUG) != 0) { \
+printf(__VA_ARGS__); \
+}
+#undef PRINT6ADDR
+#define PRINT6ADDR(addr) if((serial_debug.ip_debug & UIP6_RPL_DEBUG) != 0) { \
+printf(" %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x ", ((uint8_t *)addr)[0], ((uint8_t *)addr)[1], ((uint8_t *)addr)[2], ((uint8_t *)addr)[3], ((uint8_t *)addr)[4], ((uint8_t *)addr)[5], ((uint8_t *)addr)[6], ((uint8_t *)addr)[7], ((uint8_t *)addr)[8], ((uint8_t *)addr)[9], ((uint8_t *)addr)[10], ((uint8_t *)addr)[11], ((uint8_t *)addr)[12], ((uint8_t *)addr)[13], ((uint8_t *)addr)[14], ((uint8_t *)addr)[15]); \
+}
+#endif
+#endif
+
 /*---------------------------------------------------------------------------*/
 static struct ctimer periodic_timer;
 
