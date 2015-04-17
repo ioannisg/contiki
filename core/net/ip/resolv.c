@@ -67,9 +67,20 @@
 #include "net/ip/uip-udp-packet.h"
 #include "net/ip/uip-nameserver.h"
 #include "lib/random.h"
-#define DEBUG 1
+
+#define DEBUG 0
+
 #ifndef DEBUG
 #define DEBUG CONTIKI_TARGET_COOJA
+#endif
+
+#if NETSTACK_CONF_WITH_DNS64
+#include "ip64-addr.h"
+#endif
+
+#if UIP_MULTI_IFACES
+#include "net/ipv6/uip-ds6.h"
+uip_ds6_iface_t *resolv_multicast_iface;
 #endif
 
 #if NETSTACK_CONF_WITH_DNS64
@@ -95,7 +106,8 @@ uip_ds6_iface_t *resolv_multicast_iface;
 #define __SDCC 1
 #endif
 
-#define VERBOSE_DEBUG 1
+#define VERBOSE_DEBUG 0
+
 #if VERBOSE_DEBUG
 #define DEBUG_PRINTF(...) printf(__VA_ARGS__)
 #else
