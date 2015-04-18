@@ -34,7 +34,7 @@ print_neighbors(char *msg)
 }
 /*---------------------------------------------------------------------------*/
 static uint16_t
-sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr *nbr)
+sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr_t *nbr)
 {
   uint16_t offset = 0;
   char nbr_state[12];
@@ -45,8 +45,9 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr *nbr)
   offset = strlen(msg);
   sprint_addr6(&msg[offset], &nbr->ipaddr);
   offset = strlen(msg);
-  snprintf(&msg[offset], len-offset-1, "\",\"link\": \"",);
+  snprintf(&msg[offset], len-offset-1, "\",\"link\": \"");
   offset = strlen(msg);
+
   if(uip_ds6_nbr_lladdr_from_ipaddr(&nbr->ipaddr) != NULL) {
     laddr = uip_ds6_nbr_lladdr_from_ipaddr(&nbr->ipaddr);
 #if LINKADDR_SIZE == 8
@@ -57,10 +58,10 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr *nbr)
     snprintf(&msg[offset], len-offset-1, "%02x:%02x:%02x:%02x:%02x:%02x",
       laddr->addr[0], laddr->addr[1], laddr->addr[2],
       laddr->addr[3], laddr->addr[4], laddr->addr[5]);
+#endif
   } else {
     snprintf(&msg[offset], len-offset-1, "unknown");
   }
-#endif
   offset = strlen(msg);
   switch(nbr->state) {
   case NBR_INCOMPLETE:
@@ -84,6 +85,8 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr *nbr)
   strncpy(&msg[offset], nbr_state, len-offset-1);
   offset = strlen(msg);
   snprintf(&msg[offset], len-offset-1, "\"");
+  offset = strlen(msg);
+
 #if UIP_MULTI_IFACES
   snprintf(&msg[offset], len-offset-1, ", \"interface\": \"");
   offset = strlen(msg);
@@ -92,9 +95,10 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr *nbr)
   } else {
     snprintf(&msg[offset], len-offset-1, "0\"");
   }
-#endif /* UIP_MULTI_IFACES */
   offset = strlen(msg);
+#endif /* UIP_MULTI_IFACES */
   snprintf(&msg[offset], len-offset-1, "}");
+  return strlen(msg);
 }
 /*---------------------------------------------------------------------------*/
 static void res_get_handler(void *request, void *response, uint8_t *buffer,
@@ -182,7 +186,7 @@ res_put_handler(void * request, void *response, uint8_t *buffer,
     memcpy(buffer, message, strlen(message));
     length = strlen(message);
   }
-  REST.set_header_content_type(response, REST.type.TEXT_JSON);
+  REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
   REST.set_header_etag(response, (uint8_t *)&length, 1);
   REST.set_response_payload(response, buffer, length);
 }
