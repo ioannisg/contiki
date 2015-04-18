@@ -47,7 +47,6 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr_t *nbr)
   offset = strlen(msg);
   snprintf(&msg[offset], len-offset-1, "\",\"link\": \"");
   offset = strlen(msg);
-
   if(uip_ds6_nbr_lladdr_from_ipaddr(&nbr->ipaddr) != NULL) {
     laddr = uip_ds6_nbr_lladdr_from_ipaddr(&nbr->ipaddr);
 #if LINKADDR_SIZE == 8
@@ -61,6 +60,14 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr_t *nbr)
 #endif
   } else {
     snprintf(&msg[offset], len-offset-1, "unknown");
+  }
+  offset = strlen(msg);
+  snprintf(&msg[offset], len-offset-1, "\", \"router\": \"");
+  offset = strlen(msg);
+  if(nbr->isrouter) {
+    snprintf(&msg[offset], len-offset-1, "yes\"");  
+  } else {
+    snprintf(&msg[offset], len-offset-1, "no\"");  
   }
   offset = strlen(msg);
   switch(nbr->state) {
@@ -80,13 +87,12 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr_t *nbr)
     sprintf(nbr_state, "unknown");
     break;
   }
-  snprintf(&msg[offset], len-offset-1, "\", \"state\": \"");
+  snprintf(&msg[offset], len-offset-1, ", \"state\": \"");
   offset = strlen(msg);
-  strncpy(&msg[offset], nbr_state, len-offset-1);
+  strncpy(&msg[offset], nbr_state, MIN((len-offset-1), strlen(nbr_state)));
   offset = strlen(msg);
   snprintf(&msg[offset], len-offset-1, "\"");
-  offset = strlen(msg);
-
+  offset = strlen(msg);  
 #if UIP_MULTI_IFACES
   snprintf(&msg[offset], len-offset-1, ", \"interface\": \"");
   offset = strlen(msg);
