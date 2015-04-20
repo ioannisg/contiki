@@ -12,6 +12,8 @@
 #include "rest-engine.h"
 #include "uip-ds6-nbr.h"
 
+static struct ctimer ns_timer;
+static uip_ds6_nbr_t *saved_nbr;
 /*---------------------------------------------------------------------------*/
 static uint16_t
 print_neighbors(char *msg)
@@ -38,7 +40,7 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr_t *nbr)
 {
   uint16_t offset = 0;
   char nbr_state[12];
-  uip_lladdr_t *laddr = NULL;
+  const uip_lladdr_t *laddr = NULL;
 
   memset(msg, 0, len);
   snprintf(&msg[offset], len-offset-1, "{\"ipv6\": \"");
@@ -89,7 +91,10 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr_t *nbr)
   }
   snprintf(&msg[offset], len-offset-1, ", \"state\": \"");
   offset = strlen(msg);
-  strncpy(&msg[offset], nbr_state, MIN((len-offset-1), strlen(nbr_state)));
+  if((len-offset-1) > 0) {
+    strncpy(&msg[offset], nbr_state,
+      MIN((unsigned)(len-offset-1), strlen(nbr_state)));
+  }
   offset = strlen(msg);
   snprintf(&msg[offset], len-offset-1, "\"");
   offset = strlen(msg);  
@@ -107,9 +112,57 @@ sprint_nbr_json(char *msg, uint16_t len, uip_ds6_nbr_t *nbr)
   return strlen(msg);
 }
 /*---------------------------------------------------------------------------*/
+static void
+send_ns_callback(void *ptr)
+{
+  uip_ds6_addr_t *local_ipaddr;
+  UNUSED(ptr);
+  if(saved_nbr == NULL
+#if MULTI_IFACES
+    || saved_nbr->iface == NULL
+#endif /* UIP_MULIT_IFACES */
+    ) {
+    return;
+  }
+#if UIP_MULTI_IFACES
+  local_ipaddr = uip_ds6_get_link_local(saved_nbr->iface, ADDR_PREFERRED);
+#else
+  local_ipaddr = uip_ds6_get_link_local(ADDR_PREFERRED);
+#endif /* UIP_MULTI_IFACES */
+  if(local_ipaddr == NULL) {
+    return;
+  }
+  uip_nd6_ns_output(&local_ipaddr->ipaddr, NULL, &saved_nbr->ipaddr);
+  tcpip_ipv6_output();
+}
+/*---------------------------------------------------------------------------*/
+static int
+send_ns_for_neighbor(uip_ds6_nbr_t *nbr)
+{
+  uip_ds6_addr_t *local_ipaddr;
+#if UIP_MULTI_IFACES
+  uip_ds6_iface_t *iface = nbr->iface;
+  if(iface == NULL) {
+    return 0;
+  }
+  local_ipaddr = uip_ds6_get_link_local(iface, ADDR_PREFERRED);
+#else
+  local_ipaddr = uip_ds6_get_link_local(ADDR_PREFERRED);
+#endif
+  if(local_ipaddr == NULL) {
+    return 0;
+  }
+  /* Save state */
+  saved_nbr = nbr;
+  ctimer_set(&ns_timer, CLOCK_SECOND, send_ns_callback, NULL);
+  return 1;
+}
+/*---------------------------------------------------------------------------*/
 static void res_get_handler(void *request, void *response, uint8_t *buffer,
   uint16_t preferred_size, int32_t *offset);
 static void res_put_handler(void *request, void *response, uint8_t *buffer,
+  uint16_t preferred_size, int32_t *offset);
+static void res_post_handler(void *request, void *response, uint8_t *buffer,
   uint16_t preferred_size, int32_t *offset);
 /*---------------------------------------------------------------------------*/
 /*
@@ -121,7 +174,7 @@ static void res_put_handler(void *request, void *response, uint8_t *buffer,
 RESOURCE(res_neighbors,
          "title=\"IPv6 neighbors: ?len=0..\";rt=\"Text\"",
          res_get_handler,
-         NULL,
+         res_post_handler,
          res_put_handler,
          NULL);
 /*---------------------------------------------------------------------------*/
@@ -197,3 +250,49 @@ res_put_handler(void * request, void *response, uint8_t *buffer,
   REST.set_response_payload(response, buffer, length);
 }
 /*---------------------------------------------------------------------------*/
+static void
+res_post_handler(void *request, void *response, uint8_t *buffer,
+  uint16_t preferred_size, int32_t *offset)
+{
+  size_t len = 0;
+  const char *neighbor = NULL;
+  int success = 1;
+  int nbr_index = -1;
+  uint16_t length = 0;
+  char message[8];
+  uip_ds6_nbr_t *nbr = NULL;
+
+  if((len = REST.get_post_variable(request, "neighbor", &neighbor))) {
+    nbr_index = atoi(neighbor);
+    if(nbr_index < 0 || nbr_index >= uip_ds6_nbr_num()) {
+      success = 0;
+    } else {
+      uint8_t index = 0;
+      nbr = nbr_table_head(ds6_neighbors);
+      while(index < nbr_index && nbr != NULL) {
+        index++;
+        nbr = nbr_table_next(ds6_neighbors, nbr);
+      }
+      if(nbr == NULL) {
+        success = 0;
+      } else {
+        if(!send_ns_for_neighbor(nbr)) {
+          success == 0;
+        }
+      }
+    }
+  }
+  if(success == 0) {
+    REST.set_response_status(response, REST.status.BAD_REQUEST);
+    length = 0;
+  } else {
+    snprintf(buffer, REST_MAX_CHUNK_SIZE-1, "Send NS to ");
+    sprint_addr6(&buffer[strlen((char *)buffer)], &nbr->ipaddr);
+    length = strlen((char *)buffer);
+  }
+  REST.set_header_content_type(response, REST.type.TEXT_PLAIN);
+  REST.set_header_etag(response, (uint8_t *)&length, 1);
+  REST.set_response_payload(response, buffer, length);
+}
+/*---------------------------------------------------------------------------*/
+
