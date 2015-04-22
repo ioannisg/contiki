@@ -219,7 +219,8 @@ res_put_handler(void * request, void *response, uint8_t *buffer,
   uint16_t length = 0;
   char message[256];
   
-  if((len = REST.get_post_variable(request, "neighbor", &neighbor))) {
+  if((len = REST.get_post_variable(request, "neighbor", &neighbor)) ||
+    (len = REST.get_post_variable(request, "neighbor-remove", &neighbor))) {
     nbr_index = atoi(neighbor);
     if(nbr_index < 0 || nbr_index >= uip_ds6_nbr_num()) {
       success = 0;
@@ -233,7 +234,12 @@ res_put_handler(void * request, void *response, uint8_t *buffer,
       if(nbr == NULL) {
         success = 0;
       } else {
-        sprint_nbr_json(message, 256, nbr);
+        if(REST.get_post_variable(request, "neighbor", &neighbor)) {
+          sprint_nbr_json(message, 256, nbr);
+        } else {
+          uip_ds6_nbr_rm(nbr);
+          snprintf(message, 256, "Removed: %u\n", nbr_index);
+        }
         length = strlen(message);
       }
     }
