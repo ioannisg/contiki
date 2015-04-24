@@ -23,7 +23,8 @@
 *.atarixl
 *.c128
 *.c64
-*.cc2538dk
+*.cc2538dkI
+*.arduino_due_x
 *.srf06-cc26xx
 *.ev-aducrf101mkxz
 *.report
