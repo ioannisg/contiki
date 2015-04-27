@@ -16,7 +16,7 @@
 #endif
 
 /* Buffer size of the XBEE serial device */
-#define XBEE_SERIAL_LINE_CONF_BUFSIZE         128
+#define XBEE_SERIAL_LINE_CONF_BUFSIZE         256
 
 /* Command wait timeout for XBEE nodes - to be placed in platform-conf.h */
 #define XBEE_CONF_CMD_TIMEOUT_MS              10

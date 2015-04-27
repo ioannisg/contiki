@@ -7,6 +7,7 @@
 #include "contiki.h"
 #include "dev/leds.h"
 #include "lib/ringbuf.h"
+#include "lib/ringbuf16.h"
 #include "xbee.h"
 #include "xbee-api.h"
 #include <stdio.h>
@@ -65,7 +66,7 @@
 #define xbee_serial0_writeb ATPASTE2(XBEE_SERIAL_PORT0, _writeb)
 #define xbee_serial0_reset ATPASTE2(XBEE_SERIAL_PORT0, _reset)
 #endif /* XBEE_WITH_DUAL_RADIO */
-static struct ringbuf rxbuf;
+static struct ringbuf16 rxbuf;
 static uint8_t rxbuf_data[XBEE_BUFSIZE];
 
 #if XBEE_HANDLE_SYNC_OPERATIONS
@@ -90,7 +91,7 @@ xbee_device_t xbee_dev = {
 };
 
 #if XBEE_WITH_DUAL_RADIO
-static struct ringbuf rxbuf0;
+static struct ringbuf16 rxbuf0;
 static uint8_t rxbuf0_data[XBEE_BUFSIZE];
 #if XBEE_HANDLE_SYNC_OPERATIONS
 static struct ringbuf rx_online_buf0;
@@ -114,8 +115,6 @@ PROCESS(xbee_serial_line_process, "XBEE serial driver");
 
 process_event_t xbee_serial_line_event_message;
 process_event_t xbee_serial_line_error_event_message;
-
-static uint8_t xbee_num_of_pend_polls = 0;
 /*---------------------------------------------------------------------------*/
 void
 xbee_send_byte_stream_down(xbee_device_t *dev, uint8_t* _data, uint8_t len)
@@ -200,18 +199,7 @@ xbee_poll_process(void)
   if (!process_is_running(&xbee_serial_line_process)) {
     return 0;
   }
-  if (xbee_num_of_pend_polls < 1) {
-    if (process_post(&xbee_serial_line_process,
-      xbee_serial_line_event_message, NULL) == PROCESS_ERR_FULL) {
-        xbee_dev.stats->queue_err++;
-        PRINTF("xbee: event-queue-full\n");
-      return 0;
-    } else {
-      xbee_num_of_pend_polls = 1;
-    }
-  } else {
-    process_poll(&xbee_serial_line_process);
-  }
+  process_poll(&xbee_serial_line_process);
   return 1;
 }
 /*---------------------------------------------------------------------------*/
@@ -221,7 +209,7 @@ xbee_serial_line_irq_handler(xbee_device_t *dev, unsigned char c)
   static uint8_t overflow = 0; /* Buffer overflow: ignore until END */ 
   if(!overflow) {
     /* Add character */
-    if(ringbuf_put(dev->buf, c) == 0) {
+    if(ringbuf16_put(dev->buf, c) == 0) {
       /* Buffer overflow */
       overflow = 1;
       dev->stats->ovf_err++;
@@ -229,7 +217,7 @@ xbee_serial_line_irq_handler(xbee_device_t *dev, unsigned char c)
     }
   } else {
     /* Buffer previously overflowed */
-    if(ringbuf_put(dev->buf, c) != 0) {
+    if(ringbuf16_put(dev->buf, c) != 0) {
       overflow = 0;
     }
   }
@@ -282,7 +270,7 @@ xbee_serial_line_init(unsigned long baudrate)
 {
   /* Configure reset pin for hard reset */
   configure_output_pin(XBEE_RESET_PIN, HIGH, DISABLE, DISABLE);
-  ringbuf_init(&rxbuf, rxbuf_data, sizeof(rxbuf_data));
+  ringbuf16_init(&rxbuf, rxbuf_data, sizeof(rxbuf_data));
   memset(&xbee_stats, 0, sizeof(xbee_stats));
 #if XBEE_HANDLE_SYNC_OPERATIONS
   ringbuf_init(&rx_online_buf, rx_online_buf_data, sizeof(rx_online_buf_data));
@@ -290,7 +278,7 @@ xbee_serial_line_init(unsigned long baudrate)
 #endif
 #if XBEE_WITH_DUAL_RADIO
   configure_output_pin(XBEE_RESET_PIN_SEC, HIGH, DISABLE, DISABLE);
-  ringbuf_init(&rxbuf0, rxbuf0_data, sizeof(rxbuf0_data));
+  ringbuf16_init(&rxbuf0, rxbuf0_data, sizeof(rxbuf0_data));
   memset(&xbee_stats0, 0, sizeof(xbee_stats0));
 #if XBEE_HANDLE_SYNC_OPERATIONS
   ringbuf_init(&rx_online_buf0, rx_online_buf0_data, sizeof(rx_online_buf0_data));
@@ -346,27 +334,27 @@ xbee_serial_line_reset(xbee_device_t *device)
 void
 xbee_do_hw_reset(xbee_device_t *device)
 {
-  PRINTF("do-rst:%u\n", device->sdev);
+  PRINTF("xbee: do-rst:%u\n", device->sdev);
   device->stats->rst_count++;
   if (device->sdev == XBEE_SERIAL_DEV_PRIMAL) {
-    ringbuf_init(&rxbuf, rxbuf_data, sizeof(rxbuf_data));
+    ringbuf16_init(&rxbuf, rxbuf_data, sizeof(rxbuf_data));
 #if XBEE_HANDLE_SYNC_OPERATIONS
     ringbuf_init(&rx_online_buf, rx_online_buf_data, sizeof(rx_online_buf_data));
 #endif
     wire_digital_write(XBEE_RESET_PIN, LOW);
     watchdog_periodic();
     delay_ms(100);
-	 wire_digital_write(XBEE_RESET_PIN, HIGH);
+    wire_digital_write(XBEE_RESET_PIN, HIGH);
 #if XBEE_WITH_DUAL_RADIO
   } else if (device->sdev == XBEE_SERIAL_DEV_SECOND) {
-    ringbuf_init(&rxbuf0, rxbuf0_data, sizeof(rxbuf0_data));
+    ringbuf16_init(&rxbuf0, rxbuf0_data, sizeof(rxbuf0_data));
 #if XBEE_HANDLE_SYNC_OPERATIONS
     ringbuf_init(&rx_online_buf0, rx_online_buf0_data, sizeof(rx_online_buf0_data));
 #endif
-	 wire_digital_write(XBEE_RESET_PIN_SEC, LOW);
-	 watchdog_periodic();
-	 delay_ms(100);
-	 wire_digital_write(XBEE_RESET_PIN_SEC, HIGH);
+    wire_digital_write(XBEE_RESET_PIN_SEC, LOW);
+    watchdog_periodic();
+    delay_ms(100);
+    wire_digital_write(XBEE_RESET_PIN_SEC, HIGH);
 #endif /* XBEE_WITH_DUAL_RADIO */
   }
 }
@@ -435,7 +423,6 @@ xbee_process_byte(xbee_device_t *dev, unsigned char c)
       /* Post a serial line event error to the driver process. */
       //process_post(&xbee_serial_line_process, 
         //xbee_serial_line_error_event_message, NULL);
-      //xbee_num_of_pend_polls++; So the event is not overwritten by IRQ handler
       /* Start over the reading. */
       dev->ptr = 0;
    }
@@ -456,7 +443,6 @@ xbee_process_byte(xbee_device_t *dev, unsigned char c)
       /* Post an error message to the driver process. */
       //process_post(&xbee_serial_line_process, 
         //xbee_serial_line_error_event_message, NULL);
-      //xbee_num_of_pend_polls++; So the event is not overwritten by IRQ handler
     }
     /* Payload, but before the checksum. */
     if (dev->ptr < (dev->rsp[0] + 3)) {
@@ -525,31 +511,30 @@ PROCESS_THREAD(xbee_serial_line_process, ev, data)
   xbee_serial_line_event_message = process_alloc_event();
   /* Allocate an event ID for the XBEE serial line error event. */
   xbee_serial_line_error_event_message = process_alloc_event();
-  PROCESS_PAUSE();  
+  PROCESS_PAUSE();
   while(1) {
-    /* Fill application buffer until frame is completed or timeout */
-    int c = ringbuf_get(&rxbuf);
+    /* Fill application buffer until frame is completed */
+    ATOMIC(int c = ringbuf16_get(&rxbuf);)
 #if XBEE_WITH_DUAL_RADIO
-    int c0 = ringbuf_get(&rxbuf0);
-    if (c == -1 && c0 == -1) {
+    ATOMIC(int c0 = ringbuf_get(&rxbuf0);)
+    if(c == -1 && c0 == -1) {
 #else /* XBEE_WITH_DUAL_RADIO */
-    if (c == -1) {
+    if(c == -1) {
 #endif  /* XBEE_WITH_DUAL_RADIO */
       /* Buffer empty, wait for poll */
       PROCESS_WAIT_EVENT();
-      xbee_num_of_pend_polls--;
-      if (ev == xbee_serial_line_error_event_message) {
+      if(ev == xbee_serial_line_error_event_message) {
         PRINTF("xbee: got-err-msg\n");
         process_post(&xbee_serial_line_process, PROCESS_EVENT_EXIT, NULL);
-      } else if (ev == xbee_serial_line_event_message ||
+      } else if(ev == xbee_serial_line_event_message ||
           ev == PROCESS_EVENT_POLL) {
-      } else if (ev == PROCESS_EVENT_EXIT) {
+      } else if(ev == PROCESS_EVENT_EXIT) {
         PRINTF("xbee: got-exit-signal\n");
         break;
-      } else if (ev == PROCESS_EVENT_EXITED) {
-     	  if (data == &xbee_driver_process) {
- 	       PRINTF("xbee: xbee-driver has exited. Exiting.\n");
-          process_post(&xbee_serial_line_process, PROCESS_EVENT_EXIT, NULL);
+      } else if(ev == PROCESS_EVENT_EXITED) {
+     	  if(data == &xbee_driver_process) {
+            PRINTF("xbee: xbee-driver has exited. Exiting.\n");
+            process_post(&xbee_serial_line_process, PROCESS_EVENT_EXIT, NULL);
         }
       } else {
         PRINTF("xbee: unknown-event:%02x\n", ev);
@@ -567,7 +552,7 @@ PROCESS_THREAD(xbee_serial_line_process, ev, data)
   }
   /* Let the driver exit */
   if (process_is_running(&xbee_driver_process)) {
-    process_post(&xbee_driver_process, PROCESS_EVENT_EXIT, NULL);  
+    process_post(&xbee_driver_process, PROCESS_EVENT_EXIT, NULL);
   }
   /* Indicate an error */
   leds_on(LEDS_ALL);

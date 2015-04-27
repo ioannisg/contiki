@@ -172,6 +172,14 @@ typedef uint64_t rtimer_clock_t;
 #define INTERRUPT_DISABLE(irq_id)			NVIC_DisableIRQ(irq_id)
 #define INTERRUPT_ENABLE(irq_id)			NVIC_EnableIRQ(irq_id)
 
+#ifndef ATOMIC
+#define ATOMIC(code)                                    INTERRUPTS_DISABLE(); \
+                                                        code; \
+                                                        INTERRUPTS_ENABLE();
+#else
+#define ATOMIC(code)
+#endif /* ATOMIC */
+
 /* ---- Flash/SD configuration for the COFFEE file system ---- */
 
 /*

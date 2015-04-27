@@ -86,7 +86,7 @@ typedef struct xbee_dev_config {
 /** The structure of an XBEE serial device */
 typedef struct xbee_device {
   uint32_t baudrate;
-  struct ringbuf *buf;
+  struct ringbuf16 *buf;
 #if XBEE_HANDLE_SYNC_OPERATIONS
   struct ringbuf *onbuf;
 #endif
