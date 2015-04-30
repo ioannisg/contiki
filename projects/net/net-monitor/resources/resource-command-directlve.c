@@ -40,7 +40,7 @@ res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t pr
   char msg[12];
   uint8_t length;
   
-  if (len = REST.get_post_variable(request, "stats", &stats)) {
+  if ((len = REST.get_post_variable(request, "stats", &stats))) {
     if (strncmp(stats, "eth", len) == 0) {
       eth_stats = 0;//;enc424j600_get_overflow_counter();
       sprintf(msg, "ETH-OVF:%u", eth_stats);
@@ -49,7 +49,7 @@ res_post_put_handler(void *request, void *response, uint8_t *buffer, uint16_t pr
   }
   memcpy(buffer, msg, length);
 	  
-  if (len = REST.get_post_variable(request, "mode", &mode)) {
+  if ((len = REST.get_post_variable(request, "mode", &mode))) {
     PRINTF("mode %s\n", mode);
 
     if (strncmp(mode, "reboot", len) == 0) {

@@ -23,6 +23,7 @@ extern resource_t res_route_print_event,
   res_prefixes, 
   res_ifaces, 
   res_neighbors,
+  res_rpl,
 #if WITH_ZIGBEE_SUPPORT
   res_radio_stats_periodic,
   res_radio_stats,
